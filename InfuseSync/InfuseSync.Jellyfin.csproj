@@ -1,0 +1,54 @@
+<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj/jellyfin</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/jellyfin</BaseOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyVersion>1.0.7</AssemblyVersion>
+    <FileVersion>1.0.7</FileVersion>
+    <RootNamespace>InfuseSync</RootNamespace>
+    <AssemblyName>InfuseSync</AssemblyName>
+    <DefineConstants>JELLYFIN</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Jellyfin.Controller" Version="10.5.5" />
+    <PackageReference Include="Jellyfin.Model" Version="10.5.5" />
+    <PackageReference Include="SQLitePCL.pretty.netstandard" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="**" />
+    <Compile Include="API/InfuseSyncCheckpoints.cs" />
+    <Compile Include="API/InfuseSyncItems.cs" />
+    <Compile Include="API/InfuseSyncUserFolders.cs" />
+    <Compile Include="Configuration/PluginConfiguration.cs" />
+    <Compile Include="EntryPoints/LibrarySyncManager.cs" />
+    <Compile Include="EntryPoints/Shared.cs" />
+    <Compile Include="EntryPoints/UserSyncManager.cs" />
+    <Compile Include="Models/Checkpoint.cs" />
+    <Compile Include="Models/CheckpointId.cs" />
+    <Compile Include="Models/ItemRec.cs" />
+    <Compile Include="Models/RemovedItem.cs" />
+    <Compile Include="Models/SyncStats.cs" />
+    <Compile Include="Models/UserInfoRec.cs" />
+    <Compile Include="Plugin.cs" />
+    <Compile Include="ScheduledTasks/HousekeepingTask.cs" />
+    <Compile Include="Storage/BaseSqliteRepository.cs" />
+    <Compile Include="Storage/Db.cs" />
+    <Compile Include="Storage/ManagedConnection.cs" />
+    <Compile Include="Storage/SqliteExtensions.cs" />
+    <Compile Include="Storage/ReaderWriterLockSlimExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Configuration\configPage.html" />
+    <EmbeddedResource Include="Configuration\configPage.html" />
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

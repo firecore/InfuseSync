@@ -1,0 +1,55 @@
+<Project>
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj/emby</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/emby</BaseOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyVersion>1.0.7</AssemblyVersion>
+    <FileVersion>1.0.7</FileVersion>
+    <RootNamespace>InfuseSync</RootNamespace>
+    <AssemblyName>InfuseSync</AssemblyName>
+    <DefineConstants>EMBY</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediaBrowser.Server.Core" Version="4.4.2" />
+    <PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />
+    <PackageReference Include="System.Memory" Version="4.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="**" />
+    <Compile Include="API/InfuseSyncCheckpoints.cs" />
+    <Compile Include="API/InfuseSyncItems.cs" />
+    <Compile Include="Configuration/PluginConfiguration.cs" />
+    <Compile Include="EntryPoints/LibrarySyncManager.cs" />
+    <Compile Include="EntryPoints/Shared.cs" />
+    <Compile Include="EntryPoints/UserSyncManager.cs" />
+    <Compile Include="Logging/ILoggerExtensions.cs" />
+    <Compile Include="Models/Checkpoint.cs" />
+    <Compile Include="Models/CheckpointId.cs" />
+    <Compile Include="Models/ItemRec.cs" />
+    <Compile Include="Models/RemovedItem.cs" />
+    <Compile Include="Models/SyncStats.cs" />
+    <Compile Include="Models/UserInfoRec.cs" />
+    <Compile Include="Plugin.cs" />
+    <Compile Include="ScheduledTasks/HousekeepingTask.cs" />
+    <Compile Include="Storage/BaseSqliteRepository.cs" />
+    <Compile Include="Storage/Db.cs" />
+    <Compile Include="Storage/SqliteExtensions.cs" />
+    <Compile Include="Storage/ReaderWriterLockSlimExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Configuration\configPage.html" />
+    <None Remove="thumb.png" />
+    <EmbeddedResource Include="Configuration\configPage.html" />
+    <EmbeddedResource Include="thumb.png" />
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>
