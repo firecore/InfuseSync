@@ -1,0 +1,13 @@
+---
+name: "InfuseSync"
+guid: "022a3003-993f-45f1-8565-87d12af2e12"
+version: "1.0.7.0"
+targetAbi: "10.5.5.0"
+owner: "Firecore LLC"
+overview: "Blazing fast indexing for Infuse"
+description: "This plugin will track all media changes while any Infuse clients are offline to decrease sync times when logging back in to your server."
+category: "General"
+artifacts:
+- "InfuseSync.dll"
+changelog: >
+  changelog
