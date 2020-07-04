@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfuseSync.Emby", "InfuseSync\InfuseSync.Emby.csproj", "{41CD3BB1-3523-4046-922B-BD83B012C65B}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfuseSync.Jellyfin", "InfuseSync\InfuseSync.Jellyfin.csproj", "{054AE498-0E3F-40B2-BAD9-5646A2BE24ED}"
 EndProject
 Global

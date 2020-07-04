@@ -9,5 +9,6 @@ description: "This plugin will track all media changes while any Infuse clients 
 category: "General"
 artifacts:
 - "InfuseSync.dll"
-changelog: >
-  changelog
+build_type: "dotnet"
+dotnet_configuration: "Release"
+dotnet_framework: "netstandard2.1"
