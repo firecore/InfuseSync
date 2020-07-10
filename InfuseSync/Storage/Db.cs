@@ -511,7 +511,11 @@ namespace InfuseSync.Storage
                 {
                     connection.RunInTransaction(db =>
                     {
+#if EMBY
                         var sql = $"insert or replace into {UserInfoTable} values (@Id, @Guid, @UserId, @LastModified, @Type);";
+#else
+                        var sql = $"insert or replace into {UserInfoTable} values (@Guid, @UserId, @LastModified, @Type);";
+#endif
                         foreach (var i in infoRecs)
                         {
                             using (var statement = db.PrepareStatement(sql))
