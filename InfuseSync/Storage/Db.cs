@@ -19,7 +19,6 @@ namespace InfuseSync.Storage
         private const string CheckpointsTable = "checkpoints";
         private const string ItemsTable = "items";
         private const string UserInfoTable = "user_info";
-        private const int DbVersion = 1;
 
         private readonly IJsonSerializer _serializer;
 
@@ -28,15 +27,18 @@ namespace InfuseSync.Storage
             _serializer = jsonSerializer;
             Directory.CreateDirectory(path);
             DbFilePath = Path.Combine(path, $"infuse_sync.db");
-            Initialize();
+            Initialize(File.Exists(DbFilePath));
         }
 
-        public void Initialize()
+        public void Initialize(bool fileExists)
         {
-            UpdateVersion();
-
             using (var connection = CreateConnection())
             {
+                using (var versionManager = new Migrations.DbVersionManager(_logger))
+                {
+                    versionManager.UpdateVersion(connection, !fileExists);
+                }
+
                 RunDefaultInitialization(connection);
 
                 string[] queries = {
@@ -46,60 +48,17 @@ namespace InfuseSync.Storage
 #if EMBY
                     $"create table if not exists {ItemsTable} (Id TEXT PRIMARY KEY, Guid GUID NOT NULL, SeriesId INTEGER NULL, Season INTEGER NULL, Status INTEGER NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL)",
                     $"create index if not exists idx_{ItemsTable} on {ItemsTable}(Id)",
-                    $"create table if not exists {UserInfoTable} (Id TEXT PRIMARY KEY, Guid GUID NOT NULL, UserId TEXT NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL)",
-                    $"create index if not exists idx_{UserInfoTable} on {UserInfoTable}(Id)"
+                    $"create table if not exists {UserInfoTable} (Id TEXT NOT NULL, Guid GUID NOT NULL, UserId TEXT NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL, PRIMARY KEY (Id, UserId))",
+                    $"create index if not exists idx_{UserInfoTable} on {UserInfoTable}(Id, UserId)"
 #else
                     $"create table if not exists {ItemsTable} (Guid GUID PRIMARY KEY, SeriesId GUID NULL, Season INTEGER NULL, Status INTEGER NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL)",
                     $"create index if not exists idx_{ItemsTable} on {ItemsTable}(Guid)",
-                    $"create table if not exists {UserInfoTable} (Guid GUID PRIMARY KEY, UserId TEXT NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL)",
-                    $"create index if not exists idx_{UserInfoTable} on {UserInfoTable}(Guid)"
+                    $"create table if not exists {UserInfoTable} (Guid GUID NOT NULL, UserId TEXT NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL, PRIMARY KEY (Guid, UserId))",
+                    $"create index if not exists idx_{UserInfoTable} on {UserInfoTable}(Guid, UserId)"
 #endif
                 };
 
                 connection.RunQueries(queries);
-            }
-        }
-
-        private void UpdateVersion()
-        {
-            using (var connection = CreateConnection())
-            {
-                int version;
-                using (var versionStatement = connection.PrepareStatement("PRAGMA user_version;"))
-                {
-                    version = versionStatement.ExecuteQuery().FirstOrDefault().GetInt(0);
-                }
-
-                if (version >= DbVersion)
-                {
-                    return;
-                }
-
-                var selectTable = "select name from sqlite_master where type='table' and name not like 'sqlite_%';";
-                List<string> tables;
-                using (var entitiesStatetment = connection.PrepareStatement(selectTable))
-                {
-                    tables = entitiesStatetment.ExecuteQuery().Select(row => row.GetString(0)).ToList();
-                }
-
-                foreach (var table in tables)
-                {
-                    connection.Execute($"drop table '{table}';");
-                }
-
-                var selectIndex = "select name from sqlite_master where type='index' and name not like 'sqlite_%';";
-                List<string> indexes;
-                using (var indexesStatetment = connection.PrepareStatement(selectIndex))
-                {
-                    indexes = indexesStatetment.ExecuteQuery().Select(row => row.GetString(0)).ToList();
-                }
-
-                foreach (var index in indexes)
-                {
-                    connection.Execute($"drop index '{index}';");
-                }
-
-                connection.Execute($"PRAGMA user_version = {DbVersion};");
             }
         }
 
@@ -172,7 +131,7 @@ namespace InfuseSync.Storage
 
                         var guid = Guid.NewGuid();
 
-                        using (var statement = connection.PrepareStatement($"insert into {CheckpointsTable}(Guid, DeviceId, UserId, Timestamp) values (@Guid, @DeviceId, @UserId, @Timestamp);"))
+                        using (var statement = db.PrepareStatement($"insert into {CheckpointsTable}(Guid, DeviceId, UserId, Timestamp) values (@Guid, @DeviceId, @UserId, @Timestamp);"))
                         {
                             statement.TryBind("@Guid", guid);
                             statement.TryBind("@DeviceId", deviceId);

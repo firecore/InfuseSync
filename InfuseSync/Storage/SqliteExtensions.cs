@@ -57,6 +57,14 @@ namespace InfuseSync.Storage
             }, TransactionMode.Deferred);
         }
 
+        public static bool TableExists(this IDatabaseConnection connection, string tableName)
+        {
+            using (var statement = connection.PrepareStatement($"select 1 from sqlite_master where tbl_name = '{tableName}'"))
+            {
+                return statement.MoveNext();
+            }
+        }
+
         public static ReadOnlySpan<byte> ToGuidBlob(this Guid guid)
         {
             return guid.ToByteArray().AsSpan();

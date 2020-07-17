@@ -180,24 +180,6 @@ namespace InfuseSync.Storage
             return result;
         }
 
-        protected bool TableExists(DatabaseConnection connection, string name)
-        {
-            return connection.RunInTransaction(db => {
-                using (var statement = PrepareStatement(db, "select DISTINCT tbl_name from sqlite_master"))
-                {
-                    foreach (var row in statement.ExecuteQuery())
-                    {
-                        if (string.Equals(name, row.GetString(0), StringComparison.OrdinalIgnoreCase))
-                        {
-                            return true;
-                        }
-                    }
-                }
-
-                return false;
-            }, ReadTransactionMode);
-        }
-
         protected void RunDefaultInitialization(DatabaseConnection db)
         {
             var queries = new List<string>

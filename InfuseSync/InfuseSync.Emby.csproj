@@ -8,8 +8,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyVersion>1.0.8</AssemblyVersion>
-    <FileVersion>1.0.8</FileVersion>
+    <AssemblyVersion>1.1.1</AssemblyVersion>
+    <FileVersion>1.1.1</FileVersion>
     <RootNamespace>InfuseSync</RootNamespace>
     <AssemblyName>InfuseSync</AssemblyName>
     <DefineConstants>EMBY</DefineConstants>
@@ -42,6 +42,10 @@
     <Compile Include="Storage/Db.cs" />
     <Compile Include="Storage/SqliteExtensions.cs" />
     <Compile Include="Storage/ReaderWriterLockSlimExtensions.cs" />
+    <Compile Include="Storage/Migrations/DbVersionManager.cs" />
+    <Compile Include="Storage/Migrations/IDbMigration.cs" />
+    <Compile Include="Storage/Migrations/MigrationChangeUserDataPrimaryKey.cs" />
+    <Compile Include="Storage/Migrations/MigrationDropBetaDatabase.cs" />
   </ItemGroup>
 
   <ItemGroup>
