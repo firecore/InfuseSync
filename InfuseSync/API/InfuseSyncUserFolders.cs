@@ -20,11 +20,11 @@ namespace InfuseSync.API
 
     public class InfuseSyncUserFolders : IService
     {
-        private readonly ILogger _logger;
+        private readonly ILogger<InfuseSyncUserFolders> _logger;
         private readonly IUserManager _userManager;
         private readonly ILibraryManager _libraryManager;
 
-        public InfuseSyncUserFolders(ILogger logger, IUserManager userManager, ILibraryManager libraryManager)
+        public InfuseSyncUserFolders(ILogger<InfuseSyncUserFolders> logger, IUserManager userManager, ILibraryManager libraryManager)
         {
             _logger = logger;
             _userManager = userManager;

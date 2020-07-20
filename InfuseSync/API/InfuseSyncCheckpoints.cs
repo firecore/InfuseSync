@@ -5,10 +5,11 @@ using MediaBrowser.Controller.Net;
 using InfuseSync.Models;
 
 #if EMBY
-using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
+using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
 using Microsoft.Extensions.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.API.InfuseSyncCheckpoints>;
 #endif
 
 namespace InfuseSync.API

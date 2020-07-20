@@ -10,10 +10,11 @@ using InfuseSync.Storage;
 #if EMBY
 using System.IO;
 using MediaBrowser.Model.Drawing;
-using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
+using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
 using Microsoft.Extensions.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.Plugin>;
 #endif
 
 namespace InfuseSync

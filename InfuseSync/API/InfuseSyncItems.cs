@@ -12,11 +12,13 @@ using MediaBrowser.Model.Querying;
 using InfuseSync.Models;
 
 #if EMBY
-using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
+using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
+using Jellyfin.Data.Entities;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.API.InfuseSyncItems>;
 #endif
 
 namespace InfuseSync.API
@@ -85,6 +87,7 @@ namespace InfuseSync.API
     public class InfuseSyncItems : IService
     {
         private readonly ILogger _logger;
+
         private readonly IUserManager _userManager;
         private readonly IUserDataManager _userDataManager;
         private readonly ILibraryManager _libraryManager;

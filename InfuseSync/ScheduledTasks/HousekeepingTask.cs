@@ -5,10 +5,11 @@ using System.Threading.Tasks;
 using MediaBrowser.Model.Tasks;
 
 #if EMBY
-using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
+using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
 using Microsoft.Extensions.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.ScheduledTasks.HousekeepingTask>;
 #endif
 
 namespace InfuseSync.ScheduledTasks
