@@ -27,7 +27,11 @@ namespace InfuseSync
         public Plugin(
             IApplicationPaths applicationPaths,
             IXmlSerializer xmlSerializer,
+#if EMBY
             ILogger logger,
+#else
+            ILogger<Plugin> logger,
+#endif
             IJsonSerializer serializer) : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
