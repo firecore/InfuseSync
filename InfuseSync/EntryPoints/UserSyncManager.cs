@@ -11,22 +11,19 @@ using MediaBrowser.Model.Entities;
 using InfuseSync.Models;
 
 #if EMBY
-using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
+using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.EntryPoints.UserSyncManager>;
 #endif
 
 namespace InfuseSync.EntryPoints
 {
     public class UserSyncManager : IServerEntryPoint
     {
-#if EMBY
         private readonly ILogger _logger;
-#else
-        private readonly ILogger<UserSyncManager> _logger;
-#endif
         private readonly IUserDataManager _userDataManager;
         private readonly IUserManager _userManager;
 
@@ -36,11 +33,7 @@ namespace InfuseSync.EntryPoints
 
         private readonly Dictionary<Guid, List<BaseItem>> _changedItems = new Dictionary<Guid, List<BaseItem>>();
 
-#if EMBY
         public UserSyncManager(IUserDataManager userDataManager, ILogger logger, IUserManager userManager)
-#else
-        public UserSyncManager(IUserDataManager userDataManager, ILogger<UserSyncManager> logger, IUserManager userManager)
-#endif
         {
             _userDataManager = userDataManager;
             _logger = logger;

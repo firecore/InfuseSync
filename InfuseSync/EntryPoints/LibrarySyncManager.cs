@@ -9,11 +9,12 @@ using MediaBrowser.Controller.Plugins;
 using InfuseSync.Models;
 
 #if EMBY
-using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
+using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.EntryPoints.LibrarySyncManager>;
 #endif
 
 namespace InfuseSync.EntryPoints
@@ -21,11 +22,7 @@ namespace InfuseSync.EntryPoints
     public class LibrarySyncManager: IServerEntryPoint
     {
         private readonly ILibraryManager _libraryManager;
-#if EMBY
         private readonly ILogger _logger;
-#else
-        private readonly ILogger<LibrarySyncManager> _logger;
-#endif
         private readonly object _libraryChangedSyncLock = new object();
 
         private readonly List<ItemRec> _itemsUpdated = new List<ItemRec>();
@@ -34,11 +31,7 @@ namespace InfuseSync.EntryPoints
         private Timer WriteTimer { get; set; }
         private const int WriteDelay = 5000;
 
-#if EMBY
         public LibrarySyncManager(ILibraryManager libraryManager, ILogger logger)
-#else
-        public LibrarySyncManager(ILibraryManager libraryManager, ILogger<LibrarySyncManager> logger)
-#endif
         {
             _libraryManager = libraryManager;
             _logger = logger;
