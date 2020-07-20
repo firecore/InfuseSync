@@ -15,9 +15,17 @@ namespace InfuseSync.ScheduledTasks
 {
     public class HousekeepingTask : IScheduledTask
     {
+#if EMBY
         private readonly ILogger _logger;
+#else
+        private readonly ILogger<HousekeepingTask> _logger;
+#endif
 
+#if EMBY
         public HousekeepingTask(ILogger logger)
+        #else
+        public HousekeepingTask(ILogger<HousekeepingTask> logger)
+        #endif
         {
             _logger = logger;
             _logger.LogInformation("Infuse housekeeping task scheduled.");

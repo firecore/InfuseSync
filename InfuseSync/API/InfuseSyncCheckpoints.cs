@@ -33,9 +33,17 @@ namespace InfuseSync.API
 
     public class InfuseSyncCheckpoints : IService
     {
+#if EMBY
         private readonly ILogger _logger;
+#else
+        private readonly ILogger<InfuseSyncCheckpoints> _logger;
+#endif
 
+#if EMBY
         public InfuseSyncCheckpoints(ILogger logger)
+#else
+        public InfuseSyncCheckpoints(ILogger<InfuseSyncCheckpoints> logger)
+#endif
         {
             _logger = logger;
         }

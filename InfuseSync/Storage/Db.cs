@@ -34,7 +34,11 @@ namespace InfuseSync.Storage
         {
             using (var connection = CreateConnection())
             {
+#if EMBY
                 using (var versionManager = new Migrations.DbVersionManager(_logger))
+#else
+               using (var versionManager = new Migrations.DbVersionManager(_logger))
+#endif
                 {
                     versionManager.UpdateVersion(connection, !fileExists);
                 }

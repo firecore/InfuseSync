@@ -21,7 +21,11 @@ namespace InfuseSync.EntryPoints
     public class LibrarySyncManager: IServerEntryPoint
     {
         private readonly ILibraryManager _libraryManager;
+#if EMBY
         private readonly ILogger _logger;
+#else
+        private readonly ILogger<LibrarySyncManager> _logger;
+#endif
         private readonly object _libraryChangedSyncLock = new object();
 
         private readonly List<ItemRec> _itemsUpdated = new List<ItemRec>();
@@ -30,7 +34,11 @@ namespace InfuseSync.EntryPoints
         private Timer WriteTimer { get; set; }
         private const int WriteDelay = 5000;
 
+#if EMBY
         public LibrarySyncManager(ILibraryManager libraryManager, ILogger logger)
+#else
+        public LibrarySyncManager(ILibraryManager libraryManager, ILogger<LibrarySyncManager> logger)
+#endif
         {
             _libraryManager = libraryManager;
             _logger = logger;

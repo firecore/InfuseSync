@@ -15,6 +15,7 @@ using InfuseSync.Models;
 using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
 #else
+using Jellyfin.Data.Entities;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 #endif
@@ -84,13 +85,22 @@ namespace InfuseSync.API
 
     public class InfuseSyncItems : IService
     {
+#if EMBY
         private readonly ILogger _logger;
+#else
+        private readonly ILogger<InfuseSyncItems> _logger;
+#endif
+
         private readonly IUserManager _userManager;
         private readonly IUserDataManager _userDataManager;
         private readonly ILibraryManager _libraryManager;
         private readonly IDtoService _dtoService;
 
+#if EMBY
         public InfuseSyncItems(ILogger logger, IUserManager userManager, IUserDataManager userDataManager, ILibraryManager libraryManager, IDtoService dtoService)
+#else
+        public InfuseSyncItems(ILogger<InfuseSyncItems> logger, IUserManager userManager, IUserDataManager userDataManager, ILibraryManager libraryManager, IDtoService dtoService)
+#endif
         {
             _logger = logger;
             _userManager = userManager;
