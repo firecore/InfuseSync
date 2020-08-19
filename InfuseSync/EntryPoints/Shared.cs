@@ -14,6 +14,7 @@ namespace InfuseSync.EntryPoints
             "Series",
             "Season",
             "Episode",
+            "Video",
             "MusicVideo"
         };
 

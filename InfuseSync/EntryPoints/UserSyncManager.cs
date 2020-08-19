@@ -60,6 +60,12 @@ namespace InfuseSync.EntryPoints
                 return;
             }
 
+            var message = $"InfuseSync received user data for item '{e.Item.Name}' of type '{e.Item.GetClientTypeName()}' Guid '{e.Item.Id}'";
+#if EMBY
+            message += $" ItemID '{e.Item.GetClientId()}'";
+#endif
+            _logger.LogDebug(message);
+
             lock (_syncLock)
             {
                 if (e.Item != null)
@@ -94,6 +100,8 @@ namespace InfuseSync.EntryPoints
                     }
 
                     keys.Add(e.Item);
+
+                    _logger.LogDebug($"InfuseSync will save user data for item {e.Item.Id} user {userId}");
                 }
             }
         }

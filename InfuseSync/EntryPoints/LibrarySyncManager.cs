@@ -59,7 +59,7 @@ namespace InfuseSync.EntryPoints
         {
             var message = $"InfuseSync received updated item '{e.Item.Name}' of type '{e.Item.GetClientTypeName()}' Guid '{e.Item.Id}'";
 #if EMBY
-            message += " ItemID '{e.Item.GetClientId()}'";
+            message += $" ItemID '{e.Item.GetClientId()}'";
 #endif
             _logger.LogDebug(message);
 
@@ -108,7 +108,7 @@ namespace InfuseSync.EntryPoints
         {
             var message = $"InfuseSync received removed item '{e.Item.Name}' of type '{e.Item.GetClientTypeName()}' Guid '{e.Item.Id}'";
 #if EMBY
-            message += " ItemID '{e.Item.GetClientId()}'";
+            message += $" ItemID '{e.Item.GetClientId()}'";
 #endif
             _logger.LogDebug(message);
 
