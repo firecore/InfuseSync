@@ -15,7 +15,8 @@ namespace InfuseSync.EntryPoints
             "Season",
             "Episode",
             "Video",
-            "MusicVideo"
+            "MusicVideo",
+            "Folder"
         };
 
         public static bool ShouldSyncUpdatedItem(BaseItem item)
@@ -25,7 +26,7 @@ namespace InfuseSync.EntryPoints
 
         public static bool ShouldSyncRemovedItem(BaseItem item)
         {
-            return ShouldSyncItem(item, t => SyncTypes.Contains(t) || t == "Folder");
+            return ShouldSyncItem(item, t => SyncTypes.Contains(t));
         }
 
         private static bool ShouldSyncItem(BaseItem item, Func<string, bool> typeCheck)

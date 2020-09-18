@@ -65,6 +65,7 @@ namespace InfuseSync.API
             var syncTimestamp = DateTime.UtcNow.ToFileTime();
             db.UpdateCheckpoint(request.CheckpointID, syncTimestamp);
 
+            var folderTypes = new string [] {"Folder"};
             var boxSetTypes = new string [] {"BoxSet"};
             var seriesTypes = new string [] {"Series"};
             var seasonTypes = new string [] {"Season"};
@@ -72,6 +73,8 @@ namespace InfuseSync.API
             var videoTypes = new string [] {"Video", "MusicVideo", "Movie", "Episode"};
 
             return new SyncStats {
+                UpdatedFolders = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, folderTypes),
+                RemovedFolders = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, folderTypes),
                 UpdatedBoxSets = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, boxSetTypes),
                 RemovedBoxSets = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, boxSetTypes),
                 UpdatedTvShows = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, seriesTypes),

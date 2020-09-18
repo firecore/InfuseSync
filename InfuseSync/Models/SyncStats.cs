@@ -2,6 +2,8 @@ namespace InfuseSync.Models
 {
     public class SyncStats
     {
+        public int UpdatedFolders { get; set; }
+        public int RemovedFolders { get; set; }
         public int UpdatedBoxSets { get; set; }
         public int RemovedBoxSets { get; set; }
         public int UpdatedTvShows { get; set; }

@@ -144,10 +144,8 @@ namespace InfuseSync.EntryPoints
                     }
                 }
             }
-            else
-            {
-                ItemRemoved(e.Item);
-            }
+
+            ItemRemoved(e.Item);
         }
 
         private void ItemRemoved(BaseItem item)
