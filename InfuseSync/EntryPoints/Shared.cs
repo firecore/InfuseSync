@@ -16,7 +16,8 @@ namespace InfuseSync.EntryPoints
             "Episode",
             "Video",
             "MusicVideo",
-            "Folder"
+            "Folder",
+            "Playlist"
         };
 
         public static bool ShouldSyncUpdatedItem(BaseItem item)

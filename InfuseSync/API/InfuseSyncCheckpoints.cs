@@ -67,6 +67,7 @@ namespace InfuseSync.API
 
             var folderTypes = new string [] {"Folder"};
             var boxSetTypes = new string [] {"BoxSet"};
+            var playlistTypes = new string [] {"Playlist"};
             var seriesTypes = new string [] {"Series"};
             var seasonTypes = new string [] {"Season"};
             var collectionFolderTypes = new string [] {"CollectionFolder"};
@@ -77,6 +78,8 @@ namespace InfuseSync.API
                 RemovedFolders = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, folderTypes),
                 UpdatedBoxSets = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, boxSetTypes),
                 RemovedBoxSets = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, boxSetTypes),
+                UpdatedPlaylists = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, playlistTypes),
+                RemovedPlaylists = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, playlistTypes),
                 UpdatedTvShows = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, seriesTypes),
                 RemovedTvShows = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, seriesTypes),
                 UpdatedSeasons = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, seasonTypes),

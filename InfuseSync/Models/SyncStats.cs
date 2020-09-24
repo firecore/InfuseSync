@@ -6,6 +6,8 @@ namespace InfuseSync.Models
         public int RemovedFolders { get; set; }
         public int UpdatedBoxSets { get; set; }
         public int RemovedBoxSets { get; set; }
+        public int UpdatedPlaylists { get; set; }
+        public int RemovedPlaylists { get; set; }
         public int UpdatedTvShows { get; set; }
         public int RemovedTvShows { get; set; }
         public int UpdatedSeasons { get; set; }
