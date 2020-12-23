@@ -8,8 +8,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyVersion>1.2.4</AssemblyVersion>
-    <FileVersion>1.2.4</FileVersion>
+    <AssemblyVersion>1.3.1</AssemblyVersion>
+    <FileVersion>1.3.1</FileVersion>
     <RootNamespace>InfuseSync</RootNamespace>
     <AssemblyName>InfuseSync</AssemblyName>
     <DefineConstants>EMBY</DefineConstants>
@@ -23,8 +23,7 @@
 
   <ItemGroup>
     <Compile Remove="**" />
-    <Compile Include="API/InfuseSyncCheckpoints.cs" />
-    <Compile Include="API/InfuseSyncItems.cs" />
+    <Compile Include="API/InfuseSyncService.cs" />
     <Compile Include="Configuration/PluginConfiguration.cs" />
     <Compile Include="EntryPoints/LibrarySyncManager.cs" />
     <Compile Include="EntryPoints/Shared.cs" />
