@@ -8,8 +8,8 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <AssemblyVersion>1.3.1</AssemblyVersion>
-    <FileVersion>1.3.1</FileVersion>
+    <AssemblyVersion>1.3.2</AssemblyVersion>
+    <FileVersion>1.3.2</FileVersion>
     <RootNamespace>InfuseSync</RootNamespace>
     <AssemblyName>InfuseSync</AssemblyName>
     <DefineConstants>JELLYFIN</DefineConstants>
