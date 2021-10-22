@@ -7,6 +7,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Model.Dto;
+using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 
 #if EMBY
@@ -16,7 +17,6 @@ using InfuseSync.Logging;
 using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
 using Jellyfin.Data.Entities;
-using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 #endif
@@ -137,8 +137,18 @@ namespace InfuseSync.API
         public int? Limit { get; set; }
     }
 
+#if EMBY
+    [Route("/InfuseSync/UserFolders/{UserID}", "GET", Summary = "Get updated user data for {CheckpointID}")]
+    [Authenticated]
+#endif
     public class GetUserFolders
+#if EMBY
+     : IReturn<List<VirtualFolderInfo>>
+#endif
     {
+#if EMBY
+        [ApiMember(Name = "UserID", Description = "User identifier", IsRequired = true, DataType = "string", ParameterType = "path", Verb = "GET")]
+#endif
         public string UserID { get; set; }
     }
 
@@ -403,7 +413,6 @@ namespace InfuseSync.API
             };
         }
 
-#if JELLYFIN
         public List<VirtualFolderInfo> Get(GetUserFolders request)
         {
             _logger.LogDebug($"InfuseSync: User folders requested for UserID '{request.UserID}'");
@@ -422,6 +431,5 @@ namespace InfuseSync.API
                 })
                 .ToList();
         }
-#endif
     }
 }
