@@ -20,11 +20,8 @@ namespace InfuseSync.Storage
         private const string ItemsTable = "items";
         private const string UserInfoTable = "user_info";
 
-        private readonly IJsonSerializer _serializer;
-
-        public Db(string path, ILogger logger, IJsonSerializer jsonSerializer) : base(logger)
+        public Db(string path, ILogger logger) : base(logger)
         {
-            _serializer = jsonSerializer;
             Directory.CreateDirectory(path);
             DbFilePath = Path.Combine(path, $"infuse_sync.db");
             Initialize(File.Exists(DbFilePath));

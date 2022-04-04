@@ -50,6 +50,11 @@ namespace InfuseSync.ScheduledTasks
             return Task.CompletedTask;
         }
 
+        public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+        {
+            return Execute(cancellationToken, progress);
+        }
+
         public string Name => "Remove Old Cached Data";
         public string Category => "Infuse Sync";
         public string Description => "Removes old sync records based on 'Delete unused cache data' setting.";

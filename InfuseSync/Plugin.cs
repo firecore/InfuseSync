@@ -28,14 +28,13 @@ namespace InfuseSync
         public Plugin(
             IApplicationPaths applicationPaths,
             IXmlSerializer xmlSerializer,
-            ILogger logger,
-            IJsonSerializer serializer) : base(applicationPaths, xmlSerializer)
+            ILogger logger) : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
 
             logger.LogInformation("InfuseSync is starting.");
 
-            Db = new Db(applicationPaths.DataPath, logger, serializer);
+            Db = new Db(applicationPaths.DataPath, logger);
         }
 
         public Db Db { get; }
