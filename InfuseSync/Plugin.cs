@@ -29,7 +29,11 @@ namespace InfuseSync
             IApplicationPaths applicationPaths,
             IXmlSerializer xmlSerializer,
             ILogger logger,
+#if EMBY
             IJsonSerializer serializer) : base(applicationPaths, xmlSerializer)
+#else
+            IXmlSerializer serializer) : base(applicationPaths, xmlSerializer)
+#endif
         {
             Instance = this;
 

@@ -19,10 +19,15 @@ namespace InfuseSync.Storage
         private const string CheckpointsTable = "checkpoints";
         private const string ItemsTable = "items";
         private const string UserInfoTable = "user_info";
-
+#if EMBY
         private readonly IJsonSerializer _serializer;
 
         public Db(string path, ILogger logger, IJsonSerializer jsonSerializer) : base(logger)
+#else
+        private readonly IXmlSerializer _serializer;
+
+        public Db(string path, ILogger logger, IXmlSerializer jsonSerializer) : base(logger)
+#endif
         {
             _serializer = jsonSerializer;
             Directory.CreateDirectory(path);

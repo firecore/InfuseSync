@@ -7,9 +7,9 @@
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-    <AssemblyVersion>1.4.1</AssemblyVersion>
-    <FileVersion>1.4.1</FileVersion>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyVersion>1.5.0</AssemblyVersion>
+    <FileVersion>1.5.0</FileVersion>
     <RootNamespace>InfuseSync</RootNamespace>
     <AssemblyName>InfuseSync</AssemblyName>
     <DefineConstants>JELLYFIN</DefineConstants>
@@ -18,7 +18,7 @@
   <ItemGroup>
     <PackageReference Include="Jellyfin.Controller" Version="10.*-*" />
     <PackageReference Include="Jellyfin.Model" Version="10.*-*" />
-    <PackageReference Include="SQLitePCL.pretty.netstandard" Version="2.1.0" />
+    <PackageReference Include="SQLitePCL.pretty.netstandard" Version="3.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
   </ItemGroup>
 

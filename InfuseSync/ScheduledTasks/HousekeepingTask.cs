@@ -36,8 +36,11 @@ namespace InfuseSync.ScheduledTasks
                 }
             };
         }
-
+#if EMBY
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+#else
+        public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+#endif
         {
             var expirationDays = Plugin.Instance.Configuration.CacheExpirationDays;
             if (expirationDays == 0) {
