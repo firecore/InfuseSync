@@ -22,7 +22,9 @@ namespace InfuseSync.API
     /// Wraps <see cref="InfuseSyncService"/>.
     /// </summary>
     [ApiController]
+#if EMBY
     [Authorize(Policy = "DefaultAuthorization")]
+#endif
     [Produces(MediaTypeNames.Application.Json)]
     public class InfuseSyncController : ControllerBase
     {

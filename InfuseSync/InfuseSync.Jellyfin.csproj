@@ -7,7 +7,7 @@
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyVersion>1.4.2</AssemblyVersion>
     <FileVersion>1.4.2</FileVersion>
     <RootNamespace>InfuseSync</RootNamespace>
@@ -16,8 +16,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.*-*" />
-    <PackageReference Include="Jellyfin.Model" Version="10.*-*" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.9.0" />
+    <PackageReference Include="Jellyfin.Model" Version="10.9.0" />
     <PackageReference Include="SQLitePCL.pretty.netstandard" Version="3.1.0" />
   </ItemGroup>
 
@@ -36,6 +36,7 @@
     <Compile Include="Models/SyncStats.cs" />
     <Compile Include="Models/UserInfoRec.cs" />
     <Compile Include="Plugin.cs" />
+    <Compile Include="PluginServiceRegistrator.cs" />
     <Compile Include="ScheduledTasks/HousekeepingTask.cs" />
     <Compile Include="Storage/BaseSqliteRepository.cs" />
     <Compile Include="Storage/Db.cs" />
