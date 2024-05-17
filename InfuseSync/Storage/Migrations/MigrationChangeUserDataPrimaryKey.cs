@@ -1,9 +1,9 @@
-using SQLitePCL.pretty;
-
 #if EMBY
+using SQLitePCL.pretty;
 using DatabaseConnection = SQLitePCL.pretty.IDatabaseConnection;
 #else
-using DatabaseConnection = InfuseSync.Storage.ManagedConnection;
+using Microsoft.Data.Sqlite;
+using DatabaseConnection = Microsoft.Data.Sqlite.SqliteConnection;
 #endif
 
 namespace InfuseSync.Storage.Migrations
@@ -39,7 +39,7 @@ namespace InfuseSync.Storage.Migrations
                     "create index if not exists idx_user_info on user_info(Guid, UserId)";
 #endif
                 db.Execute(createIndex);
-            }, TransactionMode.Deferred);
+            });
         }
     }
 }

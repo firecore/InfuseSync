@@ -7,7 +7,7 @@ namespace InfuseSync.Storage
     {
         public static IDisposable Read(this ReaderWriterLockSlim obj)
         {
-            return new WriteLockToken(obj);
+            return new ReadLockToken(obj);
         }
 
         public static IDisposable Write(this ReaderWriterLockSlim obj)

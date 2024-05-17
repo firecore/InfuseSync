@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using MediaBrowser.Model.Serialization;
-using SQLitePCL.pretty;
 using InfuseSync.Models;
 
 #if EMBY
+using SQLitePCL.pretty;
 using MediaBrowser.Model.Logging;
+using Statement = SQLitePCL.pretty.IStatement;
 #else
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using Statement = Microsoft.Data.Sqlite.SqliteCommand;
 #endif
 
 namespace InfuseSync.Storage
@@ -94,7 +97,7 @@ namespace InfuseSync.Storage
                 {
                     using (var statement = connection.PrepareStatement($"select exists(select 1 from {CheckpointsTable});"))
                     {
-                        return statement.ExecuteQuery().First().GetInt(0) == 1;
+                        return statement.SelectScalarInt() == 1;
                     }
                 }
             }
@@ -108,22 +111,20 @@ namespace InfuseSync.Storage
                 {
                     return connection.RunInTransaction(db =>
                     {
-                        long timestamp = DateTime.UtcNow.ToFileTime();
+                        long timestamp;
                         using (var statement = connection.PrepareStatement($"select max(SyncTimestamp) from {CheckpointsTable} where DeviceId=@DeviceId and UserId=@UserId;"))
                         {
                             statement.TryBind("@DeviceId", deviceId);
                             statement.TryBind("@UserId", userId);
-                            if (statement.MoveNext() && !statement.Current.IsDBNull(0))
-                            {
-                                timestamp = statement.Current.GetInt64(0);
-                            }
+
+                            timestamp = statement.SelectScalarInt64() ?? DateTime.UtcNow.ToFileTime();
                         }
 
                         using (var statement = db.PrepareStatement($"delete from {CheckpointsTable} where DeviceId=@DeviceId and UserId=@UserId;"))
                         {
                             statement.TryBind("@DeviceId", deviceId);
                             statement.TryBind("@UserId", userId);
-                            statement.MoveNext();
+                            statement.ExecuteNonQuery();
                         }
 
                         var guid = Guid.NewGuid();
@@ -134,7 +135,7 @@ namespace InfuseSync.Storage
                             statement.TryBind("@DeviceId", deviceId);
                             statement.TryBind("@UserId", userId);
                             statement.TryBind("@Timestamp", timestamp);
-                            statement.MoveNext();
+                            statement.ExecuteNonQuery();
                         }
 
                         return new Checkpoint
@@ -145,7 +146,7 @@ namespace InfuseSync.Storage
                             Timestamp = timestamp,
                             SyncTimestamp = null
                         };
-                    }, TransactionMode);
+                    });
                 }
             }
         }
@@ -162,9 +163,9 @@ namespace InfuseSync.Storage
                         {
                             statement.TryBind("@SyncTimestamp", syncTimestamp);
                             statement.TryBind("@Guid", checkpointId);
-                            statement.MoveNext();
+                            statement.ExecuteNonQuery();
                         }
-                    }, TransactionMode);
+                    });
                 }
             }
         }
@@ -180,9 +181,9 @@ namespace InfuseSync.Storage
                         using (var statement = db.PrepareStatement($"delete from {CheckpointsTable} where Guid=@Guid;"))
                         {
                             statement.TryBind("@Guid", checkpointId);
-                            statement.MoveNext();
+                            statement.ExecuteNonQuery();
                         }
-                    }, TransactionMode);
+                    });
                 }
             }
         }
@@ -216,7 +217,7 @@ namespace InfuseSync.Storage
             }
         }
 
-        private List<ItemRec> GetItems(IStatement statement)
+        private List<ItemRec> GetItems(Statement statement)
         {
             var result = new List<ItemRec>();
 
@@ -265,7 +266,7 @@ namespace InfuseSync.Storage
                         statement.TryBind("@FromTimestamp", fromTimestamp);
                         statement.TryBind("@ToTimestamp", toTimestamp);
                         statement.TryBind("@Status", (int)status);
-                        return statement.ExecuteQuery().First().GetInt(0);
+                        return statement.SelectScalarInt() ?? 0;
                     }
                 }
             }
@@ -310,7 +311,7 @@ namespace InfuseSync.Storage
             }
         }
 
-        private List<UserInfoRec> GetUserInfos(IStatement statement)
+        private List<UserInfoRec> GetUserInfos(Statement statement)
         {
             var result = new List<UserInfoRec>();
 
@@ -355,7 +356,7 @@ namespace InfuseSync.Storage
                         statement.TryBind("@FromTimestamp", fromTimestamp);
                         statement.TryBind("@ToTimestamp", toTimestamp);
                         statement.TryBind("@UserId", userId);
-                        return statement.ExecuteQuery().First().GetInt(0);
+                        return statement.SelectScalarInt() ?? 0;
                     }
                 }
             }
@@ -382,13 +383,13 @@ namespace InfuseSync.Storage
                         using (var statement = db.PrepareStatement($"delete from {CheckpointsTable} where Timestamp < @Timestamp;"))
                         {
                             statement.TryBind("@Timestamp", timestamp);
-                            statement.MoveNext();
+                            statement.ExecuteNonQuery();
                         }
 
                         bool hasSessions;
                         using (var statement = connection.PrepareStatement($"select exists(select 1 from {CheckpointsTable});"))
                         {
-                            hasSessions = statement.ExecuteQuery().First().GetInt(0) == 1;
+                            hasSessions = statement.SelectScalarInt() == 1;
                         }
 
                         if (hasSessions)
@@ -396,31 +397,31 @@ namespace InfuseSync.Storage
                             long minTimestamp;
                             using (var statement = connection.PrepareStatement($"select MIN(Timestamp) from {CheckpointsTable};"))
                             {
-                                minTimestamp = statement.ExecuteQuery().First().GetInt64(0);
+                                minTimestamp = statement.SelectScalarInt64() ?? 0;
                             }
                             using (var statement = db.PrepareStatement($"delete from {ItemsTable} where LastModified < @Timestamp;"))
                             {
                                 statement.TryBind("@Timestamp", timestamp);
-                                statement.MoveNext();
+                                statement.ExecuteNonQuery();
                             }
                             using (var statement = db.PrepareStatement($"delete from {UserInfoTable} where LastModified < @Timestamp;"))
                             {
                                 statement.TryBind("@Timestamp", timestamp);
-                                statement.MoveNext();
+                                statement.ExecuteNonQuery();
                             }
                         }
                         else
                         {
                             using (var statement = db.PrepareStatement($"delete from {ItemsTable};"))
                             {
-                                statement.MoveNext();
+                                statement.ExecuteNonQuery();
                             }
                             using (var statement = db.PrepareStatement($"delete from {UserInfoTable};"))
                             {
-                                statement.MoveNext();
+                                statement.ExecuteNonQuery();
                             }
                         }
-                    }, TransactionMode);
+                    });
                 }
             }
         }
@@ -451,10 +452,10 @@ namespace InfuseSync.Storage
                                 statement.TryBind("@Status", (int)i.Status);
                                 statement.TryBind("@LastModified", i.LastModified);
                                 statement.TryBind("@Type", i.Type);
-                                statement.MoveNext();
+                                statement.ExecuteNonQuery();
                             }
                         }
-                    }, TransactionMode);
+                    });
                 }
             }
         }
@@ -483,10 +484,10 @@ namespace InfuseSync.Storage
                                 statement.TryBind("@UserId", i.UserId);
                                 statement.TryBind("@LastModified", i.LastModified);
                                 statement.TryBind("@Type", i.Type);
-                                statement.MoveNext();
+                                statement.ExecuteNonQuery();
                             }
                         }
-                    }, TransactionMode);
+                    });
                 }
             }
         }

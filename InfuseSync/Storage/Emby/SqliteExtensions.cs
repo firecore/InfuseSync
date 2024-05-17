@@ -57,6 +57,11 @@ namespace InfuseSync.Storage
             }, TransactionMode.Deferred);
         }
 
+        public static T RunInTransaction<T>(this IDatabaseConnection This, Func<IDatabaseConnection, T> f)
+        {
+            return This.RunInTransaction(f, TransactionMode.Deferred);
+        }
+
         public static bool TableExists(this IDatabaseConnection connection, string tableName)
         {
             using (var statement = connection.PrepareStatement($"select 1 from sqlite_master where tbl_name = '{tableName}'"))
@@ -461,6 +466,31 @@ namespace InfuseSync.Storage
             {
                 yield return statement.Current;
             }
+        }
+
+        public static void ExecuteNonQuery(this IStatement statement)
+        {
+            statement.MoveNext();
+        }
+
+        public static int? SelectScalarInt(this IStatement statement)
+        {
+            if (statement.MoveNext() && !statement.Current.IsDBNull(0))
+            {
+                return statement.Current.GetInt(0);
+            }
+
+            return null;
+        }
+
+        public static long? SelectScalarInt64(this IStatement statement)
+        {
+            if (statement.MoveNext() && !statement.Current.IsDBNull(0))
+            {
+                return statement.Current.GetInt64(0);
+            }
+
+            return null;
         }
     }
 }

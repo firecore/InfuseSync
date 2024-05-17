@@ -1,20 +1,11 @@
-using System.Data.SqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using SQLitePCL.pretty;
-using SQLitePCL;
 using System.Linq;
-
-#if EMBY
 using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
-using DatabaseConnection = SQLitePCL.pretty.IDatabaseConnection;
-#else
-using Microsoft.Extensions.Logging;
-using DatabaseConnection = InfuseSync.Storage.ManagedConnection;
-#endif
 
 namespace InfuseSync.Storage
 {
@@ -40,25 +31,19 @@ namespace InfuseSync.Storage
 
         private string _defaultWal;
 
-        protected DatabaseConnection _connection;
-#if JELLYFIN
-        private SQLiteDatabaseConnection _dbConnection;
-#endif
+        protected IDatabaseConnection _connection;
+
         protected virtual bool EnableSingleConnection => true;
 
         protected virtual bool EnableTempStoreMemory => false;
 
         protected virtual int? CacheSize => null;
 
-        protected DatabaseConnection CreateConnection(bool isReadOnly = false)
+        protected IDatabaseConnection CreateConnection(bool isReadOnly = false)
         {
             if (_connection != null)
             {
-#if EMBY
                 return _connection.Clone(false);
-#else
-                return _connection;
-#endif
             }
 
             lock (WriteLock)
@@ -92,18 +77,14 @@ namespace InfuseSync.Storage
 
                 connectionFlags |= ConnectionFlags.NoMutex;
 
-#if EMBY
                 var db = SQLite3.Open(DbFilePath, connectionFlags, null, false);
-#else
-                var db = SQLite3.Open(DbFilePath, connectionFlags, null);
-#endif
 
                 try
                 {
                     if (string.IsNullOrWhiteSpace(_defaultWal))
                     {
                         var query = "PRAGMA journal_mode";
-#if EMBY
+
                         using (var statement = PrepareStatement(db, query))
                         {
                             foreach (var row in statement.ExecuteQuery())
@@ -112,9 +93,6 @@ namespace InfuseSync.Storage
                                 break;
                             }
                         }
-#else
-                        _defaultWal = db.Query(query).SelectScalarString().First();
-#endif
                     }
 
                     var queries = new List<string>
@@ -144,30 +122,17 @@ namespace InfuseSync.Storage
                     throw;
                 }
 
-#if EMBY
                 _connection = db;
                 return db;
-#else
-                _dbConnection = db;
-                _connection = new ManagedConnection(db);
-                return _connection;
-#endif
             }
         }
 
-        public IStatement PrepareStatement(DatabaseConnection connection, string sql)
-        {
-            return connection.PrepareStatement(sql);
-        }
-
-#if JELLYFIN
         public IStatement PrepareStatement(IDatabaseConnection connection, string sql)
         {
             return connection.PrepareStatement(sql);
         }
-#endif
 
-        public IStatement[] PrepareAll(DatabaseConnection connection, List<string> sql)
+        public IStatement[] PrepareAll(IDatabaseConnection connection, List<string> sql)
         {
             var length = sql.Count;
             var result = new IStatement[length];
@@ -180,7 +145,7 @@ namespace InfuseSync.Storage
             return result;
         }
 
-        protected void RunDefaultInitialization(DatabaseConnection db)
+        protected void RunDefaultInitialization(IDatabaseConnection db)
         {
             var queries = new List<string>
             {
@@ -241,9 +206,6 @@ namespace InfuseSync.Storage
                     using (WriteLock.Write())
                     {
                         _connection?.Dispose();
-#if JELLYFIN
-                        _dbConnection?.Dispose();
-#endif
                     }
                 }
             }
@@ -253,7 +215,7 @@ namespace InfuseSync.Storage
             }
         }
 
-        protected List<string> GetColumnNames(DatabaseConnection connection, string table)
+        protected List<string> GetColumnNames(IDatabaseConnection connection, string table)
         {
             var list = new List<string>();
 
@@ -273,7 +235,7 @@ namespace InfuseSync.Storage
             return list;
         }
 
-        protected bool AddColumn(DatabaseConnection connection, string table, string columnName, string type, List<string> existingColumnNames)
+        protected bool AddColumn(IDatabaseConnection connection, string table, string columnName, string type, List<string> existingColumnNames)
         {
             if (existingColumnNames.Contains(columnName, StringComparer.OrdinalIgnoreCase))
             {
