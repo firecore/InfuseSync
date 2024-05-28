@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
-using SQLitePCL.pretty;
 
 #if EMBY
+using SQLitePCL.pretty;
 using DatabaseConnection = SQLitePCL.pretty.IDatabaseConnection;
 #else
-using DatabaseConnection = InfuseSync.Storage.ManagedConnection;
+using Microsoft.Data.Sqlite;
+using DatabaseConnection = Microsoft.Data.Sqlite.SqliteConnection;
 #endif
 
 namespace InfuseSync.Storage.Migrations
@@ -40,7 +41,7 @@ namespace InfuseSync.Storage.Migrations
                 {
                     db.Execute($"drop index '{index}';");
                 }
-            }, TransactionMode.Deferred);
+            });
         }
     }
 }

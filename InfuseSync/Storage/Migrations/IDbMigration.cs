@@ -1,7 +1,7 @@
 #if EMBY
 using DatabaseConnection = SQLitePCL.pretty.IDatabaseConnection;
 #else
-using DatabaseConnection = InfuseSync.Storage.ManagedConnection;
+using DatabaseConnection = Microsoft.Data.Sqlite.SqliteConnection;
 #endif
 
 namespace InfuseSync.Storage.Migrations

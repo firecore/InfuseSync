@@ -15,13 +15,18 @@ using InfuseSync.Logging;
 using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.EntryPoints.UserSyncManager>;
 #endif
 
 namespace InfuseSync.EntryPoints
 {
-    public class UserSyncManager : IServerEntryPoint
+#if EMBY
+    public class UserSyncManager: IServerEntryPoint
+#else
+    public class UserSyncManager: IHostedService
+#endif
     {
         private readonly ILogger _logger;
         private readonly IUserDataManager _userDataManager;
@@ -40,15 +45,16 @@ namespace InfuseSync.EntryPoints
             _userManager = userManager;
         }
 
-#if EMBY
         public void Run()
         {
             _userDataManager.UserDataSaved += UserDataSaved;
         }
-#else
-        public Task RunAsync()
+
+#if JELLYFIN
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            _userDataManager.UserDataSaved += UserDataSaved;
+            Run();
+
             return Task.CompletedTask;
         }
 #endif
@@ -151,13 +157,6 @@ namespace InfuseSync.EntryPoints
             Plugin.Instance.Db.SaveUserInfo(infoRecs);
         }
 
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
         private bool _disposed;
 
         protected virtual void Dispose(bool disposing)
@@ -180,5 +179,20 @@ namespace InfuseSync.EntryPoints
 
             _disposed = true;
         }
+
+#if EMBY
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+#else
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            Dispose(true);
+
+            return Task.CompletedTask;
+        }
+#endif
     }
 }

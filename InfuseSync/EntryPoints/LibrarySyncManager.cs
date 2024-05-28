@@ -13,13 +13,18 @@ using InfuseSync.Logging;
 using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.EntryPoints.LibrarySyncManager>;
 #endif
 
 namespace InfuseSync.EntryPoints
 {
+#if EMBY
     public class LibrarySyncManager: IServerEntryPoint
+#else
+    public class LibrarySyncManager: IHostedService
+#endif
     {
         private readonly ILibraryManager _libraryManager;
         private readonly ILogger _logger;
@@ -37,19 +42,17 @@ namespace InfuseSync.EntryPoints
             _logger = logger;
         }
 
-#if EMBY
         public void Run()
         {
             _libraryManager.ItemAdded += ItemUpdated;
             _libraryManager.ItemUpdated += ItemUpdated;
             _libraryManager.ItemRemoved += ItemRemoved;
         }
-#else
-        public Task RunAsync()
+
+#if JELLYFIN
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            _libraryManager.ItemAdded += ItemUpdated;
-            _libraryManager.ItemUpdated += ItemUpdated;
-            _libraryManager.ItemRemoved += ItemRemoved;
+            Run();
 
             return Task.CompletedTask;
         }
@@ -239,12 +242,6 @@ namespace InfuseSync.EntryPoints
             }
         }
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
         private bool _disposed;
 
         protected virtual void Dispose(bool disposing)
@@ -269,5 +266,20 @@ namespace InfuseSync.EntryPoints
 
             _disposed = true;
         }
+
+#if EMBY
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+#else
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            Dispose(true);
+
+            return Task.CompletedTask;
+        }
+#endif
     }
 }

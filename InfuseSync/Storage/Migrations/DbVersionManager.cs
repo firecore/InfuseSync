@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using SQLitePCL.pretty;
 
 #if EMBY
 using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
+using SQLitePCL.pretty;
 using DatabaseConnection = SQLitePCL.pretty.IDatabaseConnection;
 #else
 using Microsoft.Extensions.Logging;
-using DatabaseConnection = InfuseSync.Storage.ManagedConnection;
+using Microsoft.Data.Sqlite;
+using DatabaseConnection = Microsoft.Data.Sqlite.SqliteConnection;
 #endif
 
 namespace InfuseSync.Storage.Migrations
@@ -44,7 +45,12 @@ namespace InfuseSync.Storage.Migrations
             int version;
             using (var versionStatement = connection.PrepareStatement("PRAGMA user_version;"))
             {
-                version = versionStatement.ExecuteQuery().FirstOrDefault().GetInt(0);
+                var userVersion = versionStatement.SelectScalarInt();
+                if (userVersion == null)
+                {
+                    connection.Execute($"PRAGMA user_version = {DbVersion};");
+                }
+                version = userVersion ?? DbVersion;
             }
 
             if (version >= DbVersion)

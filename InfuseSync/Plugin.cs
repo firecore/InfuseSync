@@ -3,16 +3,18 @@ using System.Collections.Generic;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
-using MediaBrowser.Model.Serialization;
 using InfuseSync.Configuration;
 using InfuseSync.Storage;
 
 #if EMBY
 using System.IO;
+using MediaBrowser.Common;
+using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Model.Drawing;
+using MediaBrowser.Model.Logging;
 using InfuseSync.Logging;
-using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
+using MediaBrowser.Model.Serialization;
 using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.Plugin>;
 #endif
@@ -20,11 +22,30 @@ using ILogger = Microsoft.Extensions.Logging.ILogger<InfuseSync.Plugin>;
 namespace InfuseSync
 {
 #if EMBY
-    public class Plugin: BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
+    public class Plugin: BasePluginSimpleUI<PluginOptions>, IHasThumbImage
 #else
     public class Plugin: BasePlugin<PluginConfiguration>, IHasWebPages
 #endif
     {
+#if EMBY
+        public PluginOptions Configuration
+        {
+            get => GetOptions();
+        }
+
+        public Plugin(IApplicationHost applicationHost, ILogManager logManager) : base(applicationHost)
+        {
+            Instance = this;
+
+            var logger = logManager.GetLogger(this.Name);
+
+            logger.LogInformation("InfuseSync is starting.");
+
+            var applicationPaths = applicationHost.Resolve<IApplicationPaths>();
+
+            Db = new Db(applicationPaths.DataPath, logger);
+        }
+#else
         public Plugin(
             IApplicationPaths applicationPaths,
             IXmlSerializer xmlSerializer,
@@ -36,6 +57,7 @@ namespace InfuseSync
 
             Db = new Db(applicationPaths.DataPath, logger);
         }
+#endif
 
         public Db Db { get; }
 
