@@ -2,7 +2,10 @@
 
 InfuseSync is a plugin for Emby and Jellyfin media servers that tracks all media changes to decrease sync times with [Infuse](https://firecore.com/infuse) clients.
 
-## Build & Installation
+## Standard Installation (recommended)
+View the InfuseSync [install guide](https://support.firecore.com/hc/articles/23885208585367) for Emby and Jellyfin.
+
+## Build and Install Manually
 
 1. Install [.NET Core SDK](https://dotnet.microsoft.com/download)
 
