@@ -395,11 +395,9 @@ namespace InfuseSync.API
                 .Where(pair => pair.Value != null)
                 .Select(pair => {
                     var dto = _userDataManager.GetUserDataDto(pair.Value, user);
-#if EMBY
+
                     dto.ItemId = pair.Key;
-#else
-                    dto.ItemId = pair.Key.ToString("N", CultureInfo.InvariantCulture);
-#endif
+
                     return dto;
                 })
                 .ToArray();
