@@ -8,8 +8,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyVersion>1.5.0</AssemblyVersion>
-    <FileVersion>1.5.0</FileVersion>
+    <AssemblyVersion>1.5.1</AssemblyVersion>
+    <FileVersion>1.5.1</FileVersion>
     <RootNamespace>InfuseSync</RootNamespace>
     <AssemblyName>InfuseSync</AssemblyName>
     <DefineConstants>EMBY</DefineConstants>
