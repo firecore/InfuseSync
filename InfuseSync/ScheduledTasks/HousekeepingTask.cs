@@ -31,7 +31,11 @@ namespace InfuseSync.ScheduledTasks
             return new[] {
                 new TaskTriggerInfo
                 {
+#if EMBY
                     Type = TaskTriggerInfo.TriggerDaily,
+#else
+                    Type = TaskTriggerInfoType.DailyTrigger,
+#endif
                     TimeOfDayTicks = TimeSpan.FromMinutes(1).Ticks
                 }
             };

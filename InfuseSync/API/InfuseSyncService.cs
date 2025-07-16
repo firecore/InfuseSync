@@ -16,7 +16,7 @@ using MediaBrowser.Controller.Net;
 using InfuseSync.Logging;
 using ILogger = MediaBrowser.Model.Logging.ILogger;
 #else
-using Jellyfin.Data.Entities;
+using Jellyfin.Database.Implementations.Entities;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 #endif
