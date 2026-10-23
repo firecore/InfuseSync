@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using MediaBrowser.Controller.Entities;
@@ -125,30 +126,123 @@ namespace InfuseSync.EntryPoints
                 return;
             }
 
-            // Folder already have no content in it when it is removed.
-            // So we have to re-fetch all affected libraries.
-            if (e.Item.GetType() == typeof(Folder))
+            // Queue the removal before a library refresh can fail.
+            ItemRemoved(e.Item);
+
+            // The folder is already empty, so refresh its library.
+            if (e.Item is Folder && ShouldRefreshAffectedLibraries(e.Item.GetClientTypeName()))
             {
-                var topFolder = e.Parent.GetParents().LastOrDefault(i => i.GetType() == typeof(Folder));
-                if (topFolder == null && e.Parent.GetType() == typeof(Folder))
+                try
                 {
-                    topFolder = e.Parent;
+                    RefreshAffectedLibraries(e.Item, e.Parent);
                 }
-
-                if (topFolder != null)
+                catch (Exception exception)
                 {
-                    var libs = _libraryManager.GetVirtualFolders()
-                        .Where(vf => vf.Locations.Contains(topFolder.Path))
-                        .Select(vf => _libraryManager.GetItemById(vf.ItemId));
+                    _logger.LogError(
+                        exception,
+                        $"Unable to refresh libraries affected by removed folder '{e.Item.Id}'.");
+                }
+            }
+        }
 
-                    foreach (var lib in libs)
-                    {
-                        ItemUpdated(lib);
-                    }
+        private void RefreshAffectedLibraries(BaseItem removedFolder, BaseItem parent)
+        {
+            var ancestorPaths = parent == null
+                ? Array.Empty<string>()
+                : parent.GetParents().OfType<Folder>().Select(folder => folder.Path);
+            var folderPaths = GetAffectedFolderPaths(
+                removedFolder.Path,
+                parent is Folder ? parent.Path : null,
+                ancestorPaths);
+
+            var libraryIds = _libraryManager.GetVirtualFolders()
+                .Where(folder => HasMatchingLocation(folderPaths, folder.Locations))
+                .Select(folder => folder.ItemId)
+                .Distinct()
+                .ToArray();
+
+            foreach (var libraryId in libraryIds)
+            {
+                var library = _libraryManager.GetItemById(libraryId);
+                if (library != null)
+                {
+                    ItemUpdated(library);
+                }
+            }
+        }
+
+        internal static IReadOnlyCollection<string> GetAffectedFolderPaths(
+            string removedPath,
+            string parentPath,
+            IEnumerable<string> ancestorPaths)
+        {
+            var paths = new HashSet<string>(StringComparer.Ordinal);
+            AddPath(paths, removedPath);
+            AddPath(paths, parentPath);
+
+            if (ancestorPaths != null)
+            {
+                foreach (var path in ancestorPaths)
+                {
+                    AddPath(paths, path);
                 }
             }
 
-            ItemRemoved(e.Item);
+            return paths;
+        }
+
+        internal static bool ShouldRefreshAffectedLibraries(string clientType)
+        {
+            return string.Equals(clientType, "Folder", StringComparison.Ordinal);
+        }
+
+        internal static bool HasMatchingLocation(
+            IReadOnlyCollection<string> folderPaths,
+            IEnumerable<string> locations)
+        {
+            return folderPaths != null
+                && locations != null
+                && locations.Any(location => folderPaths.Any(path => IsSameOrDescendant(path, location)));
+        }
+
+        private static bool IsSameOrDescendant(string path, string location)
+        {
+            if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(location))
+            {
+                return false;
+            }
+
+            var comparison = Path.DirectorySeparatorChar == '\\'
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+            var normalizedPath = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var normalizedLocation = location.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            if (string.Equals(normalizedPath, normalizedLocation, comparison))
+            {
+                return true;
+            }
+
+            if (normalizedLocation.Length == 0)
+            {
+                return IsDirectorySeparator(location[0]) && IsDirectorySeparator(path[0]);
+            }
+
+            return normalizedPath.StartsWith(normalizedLocation + Path.DirectorySeparatorChar, comparison)
+                || normalizedPath.StartsWith(normalizedLocation + Path.AltDirectorySeparatorChar, comparison);
+        }
+
+        private static bool IsDirectorySeparator(char value)
+        {
+            return value == Path.DirectorySeparatorChar || value == Path.AltDirectorySeparatorChar;
+        }
+
+        private static void AddPath(ISet<string> paths, string path)
+        {
+            if (!string.IsNullOrEmpty(path))
+            {
+                paths.Add(path);
+            }
         }
 
         private void ItemRemoved(BaseItem item)

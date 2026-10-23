@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="InfuseSync.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="**" />
     <Compile Include="API/InfuseSyncController.cs" />
     <Compile Include="API/InfuseSyncService.cs" />
