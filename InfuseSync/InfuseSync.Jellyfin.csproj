@@ -26,6 +26,8 @@
     <Compile Include="API/InfuseSyncController.cs" />
     <Compile Include="API/InfuseSyncService.cs" />
     <Compile Include="Configuration/PluginConfiguration.cs" />
+    <Compile Include="EntryPoints/CoalescingBatchWriter.cs" />
+    <Compile Include="EntryPoints/EventHandlerTracker.cs" />
     <Compile Include="EntryPoints/LibrarySyncManager.cs" />
     <Compile Include="EntryPoints/Shared.cs" />
     <Compile Include="EntryPoints/UserSyncManager.cs" />
@@ -50,6 +52,10 @@
     <Compile Include="Storage/Migrations/MigrationAddCheckpointActivity.cs" />
     <Compile Include="Storage/Migrations/MigrationChangeUserDataPrimaryKey.cs" />
     <Compile Include="Storage/Migrations/MigrationDropBetaDatabase.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="InfuseSync.Tests" />
   </ItemGroup>
 
   <ItemGroup>

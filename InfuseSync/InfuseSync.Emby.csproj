@@ -25,6 +25,8 @@
     <Compile Remove="**" />
     <Compile Include="API/InfuseSyncService.cs" />
     <Compile Include="Configuration/PluginOptions.cs" />
+    <Compile Include="EntryPoints/CoalescingBatchWriter.cs" />
+    <Compile Include="EntryPoints/EventHandlerTracker.cs" />
     <Compile Include="EntryPoints/LibrarySyncManager.cs" />
     <Compile Include="EntryPoints/Shared.cs" />
     <Compile Include="EntryPoints/UserSyncManager.cs" />

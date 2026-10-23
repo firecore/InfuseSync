@@ -191,8 +191,7 @@ namespace InfuseSync.API
             _logger.LogDebug($"InfuseSync: Sync request for CheckpointID '{request.CheckpointID}'");
 
             var db = Plugin.Instance.Db;
-            var syncTimestamp = DateTime.UtcNow.ToFileTime();
-            var checkpoint = db.StartSync(request.CheckpointID, syncTimestamp);
+            var checkpoint = db.StartSync(request.CheckpointID);
             if (checkpoint == null)
             {
                 throw new ResourceNotFoundException($"Checkpoint with ID '{request.CheckpointID}' not found.");
