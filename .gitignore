@@ -35,3 +35,6 @@ bld/
 msbuild.log
 msbuild.err
 msbuild.wrn
+
+# Test results
+TestResults/
