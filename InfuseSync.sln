@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfuseSync.Emby", "InfuseSy
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfuseSync.Jellyfin", "InfuseSync\InfuseSync.Jellyfin.csproj", "{054AE498-0E3F-40B2-BAD9-5646A2BE24ED}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfuseSync.Tests", "InfuseSync.Tests\InfuseSync.Tests.csproj", "{6D899085-ABEC-4879-8E10-30C8128B4E19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{054AE498-0E3F-40B2-BAD9-5646A2BE24ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{054AE498-0E3F-40B2-BAD9-5646A2BE24ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{054AE498-0E3F-40B2-BAD9-5646A2BE24ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D899085-ABEC-4879-8E10-30C8128B4E19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D899085-ABEC-4879-8E10-30C8128B4E19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D899085-ABEC-4879-8E10-30C8128B4E19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D899085-ABEC-4879-8E10-30C8128B4E19}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
