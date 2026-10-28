@@ -190,16 +190,13 @@ namespace InfuseSync.API
         {
             _logger.LogDebug($"InfuseSync: Sync request for CheckpointID '{request.CheckpointID}'");
 
-            var checkpoint = Plugin.Instance.Db.GetCheckpoint(request.CheckpointID);
+            var db = Plugin.Instance.Db;
+            var syncTimestamp = DateTime.UtcNow.ToFileTime();
+            var checkpoint = db.StartSync(request.CheckpointID, syncTimestamp);
             if (checkpoint == null)
             {
                 throw new ResourceNotFoundException($"Checkpoint with ID '{request.CheckpointID}' not found.");
             }
-
-            var db = Plugin.Instance.Db;
-
-            var syncTimestamp = DateTime.UtcNow.ToFileTime();
-            db.UpdateCheckpoint(request.CheckpointID, syncTimestamp);
 
             var folderTypes = new string [] {"Folder"};
             var boxSetTypes = new string [] {"BoxSet"};
@@ -210,20 +207,20 @@ namespace InfuseSync.API
             var videoTypes = new string [] {"Video", "MusicVideo", "Movie", "Episode"};
 
             return new SyncStats {
-                UpdatedFolders = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, folderTypes),
-                RemovedFolders = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, folderTypes),
-                UpdatedBoxSets = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, boxSetTypes),
-                RemovedBoxSets = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, boxSetTypes),
-                UpdatedPlaylists = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, playlistTypes),
-                RemovedPlaylists = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, playlistTypes),
-                UpdatedTvShows = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, seriesTypes),
-                RemovedTvShows = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, seriesTypes),
-                UpdatedSeasons = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, seasonTypes),
-                RemovedSeasons = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, seasonTypes),
-                UpdatedVideos = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, videoTypes),
-                RemovedVideos = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Removed, videoTypes),
-                UpdatedCollectionFolders = db.ItemsCount(checkpoint.Timestamp, syncTimestamp, ItemStatus.Updated, collectionFolderTypes),
-                UpdatedUserData = db.UserInfoCount(checkpoint.Timestamp, syncTimestamp, checkpoint.UserId, videoTypes)
+                UpdatedFolders = db.ItemsCount(checkpoint.Guid, ItemStatus.Updated, folderTypes),
+                RemovedFolders = db.ItemsCount(checkpoint.Guid, ItemStatus.Removed, folderTypes),
+                UpdatedBoxSets = db.ItemsCount(checkpoint.Guid, ItemStatus.Updated, boxSetTypes),
+                RemovedBoxSets = db.ItemsCount(checkpoint.Guid, ItemStatus.Removed, boxSetTypes),
+                UpdatedPlaylists = db.ItemsCount(checkpoint.Guid, ItemStatus.Updated, playlistTypes),
+                RemovedPlaylists = db.ItemsCount(checkpoint.Guid, ItemStatus.Removed, playlistTypes),
+                UpdatedTvShows = db.ItemsCount(checkpoint.Guid, ItemStatus.Updated, seriesTypes),
+                RemovedTvShows = db.ItemsCount(checkpoint.Guid, ItemStatus.Removed, seriesTypes),
+                UpdatedSeasons = db.ItemsCount(checkpoint.Guid, ItemStatus.Updated, seasonTypes),
+                RemovedSeasons = db.ItemsCount(checkpoint.Guid, ItemStatus.Removed, seasonTypes),
+                UpdatedVideos = db.ItemsCount(checkpoint.Guid, ItemStatus.Updated, videoTypes),
+                RemovedVideos = db.ItemsCount(checkpoint.Guid, ItemStatus.Removed, videoTypes),
+                UpdatedCollectionFolders = db.ItemsCount(checkpoint.Guid, ItemStatus.Updated, collectionFolderTypes),
+                UpdatedUserData = db.UserInfoCount(checkpoint.Guid, videoTypes)
             };
         }
 
@@ -244,8 +241,7 @@ namespace InfuseSync.API
             var includeTypes = request.IncludeItemTypes?.Split(',');
 
             var itemsUpdated = Plugin.Instance.Db.GetItems(
-                checkpoint.Timestamp,
-                checkpoint.SyncTimestamp.Value,
+                checkpoint.Guid,
                 ItemStatus.Updated,
                 includeTypes,
                 request.StartIndex ?? 0,
@@ -253,8 +249,7 @@ namespace InfuseSync.API
             );
 
             var totalCount = Plugin.Instance.Db.ItemsCount(
-                checkpoint.Timestamp,
-                checkpoint.SyncTimestamp.Value,
+                checkpoint.Guid,
                 ItemStatus.Updated,
                 includeTypes
             );
@@ -313,8 +308,7 @@ namespace InfuseSync.API
             var includeTypes = request.IncludeItemTypes?.Split(',');
 
             var itemsRemoved = Plugin.Instance.Db.GetItems(
-                checkpoint.Timestamp,
-                checkpoint.SyncTimestamp.Value,
+                checkpoint.Guid,
                 ItemStatus.Removed,
                 includeTypes,
                 request.StartIndex ?? 0,
@@ -322,8 +316,7 @@ namespace InfuseSync.API
             );
 
             var totalCount = Plugin.Instance.Db.ItemsCount(
-                checkpoint.Timestamp,
-                checkpoint.SyncTimestamp.Value,
+                checkpoint.Guid,
                 ItemStatus.Removed,
                 includeTypes
             );
@@ -365,18 +358,14 @@ namespace InfuseSync.API
             var includeTypes = request.IncludeItemTypes?.Split(',');
 
             var updatedUserData = Plugin.Instance.Db.GetUserInfos(
-                checkpoint.Timestamp,
-                checkpoint.SyncTimestamp.Value,
-                checkpoint.UserId,
+                checkpoint.Guid,
                 includeTypes,
                 request.StartIndex ?? 0,
                 request.Limit ?? int.MaxValue
             );
 
             var totalCount = Plugin.Instance.Db.UserInfoCount(
-                checkpoint.Timestamp,
-                checkpoint.SyncTimestamp.Value,
-                checkpoint.UserId,
+                checkpoint.Guid,
                 includeTypes
             );
 
