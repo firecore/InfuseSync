@@ -11,12 +11,14 @@
     <RootNamespace>InfuseSync</RootNamespace>
     <AssemblyName>InfuseSync</AssemblyName>
     <DefineConstants>JELLYFIN</DefineConstants>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetLockFilePath>packages.jellyfin.lock.json</NuGetLockFilePath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="12.0.*-*" />
-    <PackageReference Include="Jellyfin.Model" Version="12.0.*-*" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.10" />
+    <PackageReference Include="Jellyfin.Controller" Version="12.3.0" />
+    <PackageReference Include="Jellyfin.Model" Version="12.3.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +26,8 @@
     <Compile Include="API/InfuseSyncController.cs" />
     <Compile Include="API/InfuseSyncService.cs" />
     <Compile Include="Configuration/PluginConfiguration.cs" />
+    <Compile Include="EntryPoints/CoalescingBatchWriter.cs" />
+    <Compile Include="EntryPoints/EventHandlerTracker.cs" />
     <Compile Include="EntryPoints/LibrarySyncManager.cs" />
     <Compile Include="EntryPoints/Shared.cs" />
     <Compile Include="EntryPoints/UserSyncManager.cs" />
@@ -44,8 +48,14 @@
     <Compile Include="Storage/Jellyfin/TempStoreMode.cs" />
     <Compile Include="Storage/Migrations/DbVersionManager.cs" />
     <Compile Include="Storage/Migrations/IDbMigration.cs" />
+    <Compile Include="Storage/Migrations/MigrationAddCheckpointSnapshots.cs" />
+    <Compile Include="Storage/Migrations/MigrationAddCheckpointActivity.cs" />
     <Compile Include="Storage/Migrations/MigrationChangeUserDataPrimaryKey.cs" />
     <Compile Include="Storage/Migrations/MigrationDropBetaDatabase.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="InfuseSync.Tests" />
   </ItemGroup>
 
   <ItemGroup>

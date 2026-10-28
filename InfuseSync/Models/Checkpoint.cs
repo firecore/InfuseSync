@@ -9,5 +9,6 @@ namespace InfuseSync.Models
         public string UserId { get; set; }
         public long Timestamp { get; set; }
         public long? SyncTimestamp { get; set; }
+        public long LastActivity { get; set; }
     }
 }

@@ -8,10 +8,12 @@ using InfuseSync.Models;
 #if EMBY
 using SQLitePCL.pretty;
 using MediaBrowser.Model.Logging;
+using DatabaseConnection = SQLitePCL.pretty.IDatabaseConnection;
 using Statement = SQLitePCL.pretty.IStatement;
 #else
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using DatabaseConnection = Microsoft.Data.Sqlite.SqliteConnection;
 using Statement = Microsoft.Data.Sqlite.SqliteCommand;
 #endif
 
@@ -22,9 +24,19 @@ namespace InfuseSync.Storage
         private const string CheckpointsTable = "checkpoints";
         private const string ItemsTable = "items";
         private const string UserInfoTable = "user_info";
+        private const string CheckpointItemsTable = "checkpoint_items";
+        private const string CheckpointUserInfoTable = "checkpoint_user_info";
+        private const string WatermarkTable = "sync_watermark";
+        private readonly Func<long> _utcFileTime;
 
-        public Db(string path, ILogger logger) : base(logger)
+        public Db(string path, ILogger logger)
+            : this(path, logger, () => DateTime.UtcNow.ToFileTime())
         {
+        }
+
+        internal Db(string path, ILogger logger, Func<long> utcFileTime) : base(logger)
+        {
+            _utcFileTime = utcFileTime ?? throw new ArgumentNullException(nameof(utcFileTime));
             Directory.CreateDirectory(path);
             DbFilePath = Path.Combine(path, $"infuse_sync.db");
             Initialize(File.Exists(DbFilePath));
@@ -42,23 +54,102 @@ namespace InfuseSync.Storage
                 RunDefaultInitialization(connection);
 
                 string[] queries = {
-                    $"create table if not exists {CheckpointsTable} (Guid GUID PRIMARY KEY, DeviceId TEXT NOT NULL, UserId TEXT NOT NULL, Timestamp INTEGER NOT NULL, SyncTimestamp INTEGER NULL)",
+                    $"create table if not exists {CheckpointsTable} (Guid GUID PRIMARY KEY, DeviceId TEXT NOT NULL, UserId TEXT NOT NULL, Timestamp INTEGER NOT NULL, SyncTimestamp INTEGER NULL, LastActivity INTEGER NOT NULL)",
                     $"create index if not exists idx_{CheckpointsTable} on {CheckpointsTable}(Guid)",
                     $"create index if not exists idx_{CheckpointsTable}_device_user on {CheckpointsTable}(DeviceId, UserId)",
 #if EMBY
                     $"create table if not exists {ItemsTable} (Id TEXT PRIMARY KEY, Guid GUID NOT NULL, SeriesId INTEGER NULL, Season INTEGER NULL, Status INTEGER NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL)",
-                    $"create index if not exists idx_{ItemsTable} on {ItemsTable}(Id)",
+                    $"drop index if exists idx_{ItemsTable}",
+                    $"create index if not exists idx_{ItemsTable}_modified on {ItemsTable}(LastModified)",
                     $"create table if not exists {UserInfoTable} (Id TEXT NOT NULL, Guid GUID NOT NULL, UserId TEXT NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL, PRIMARY KEY (Id, UserId))",
-                    $"create index if not exists idx_{UserInfoTable} on {UserInfoTable}(Id, UserId)"
+                    $"drop index if exists idx_{UserInfoTable}",
+                    $"create index if not exists idx_{UserInfoTable}_user_modified on {UserInfoTable}(UserId, LastModified)",
+                    $"create table if not exists {CheckpointItemsTable} (CheckpointId GUID NOT NULL, Id TEXT NOT NULL, Guid GUID NOT NULL, SeriesId INTEGER NULL, Season INTEGER NULL, Status INTEGER NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL, PRIMARY KEY (CheckpointId, Id))",
+                    $"create index if not exists idx_{CheckpointItemsTable}_page on {CheckpointItemsTable}(CheckpointId, Status, LastModified, Id, Type)",
+                    $"create table if not exists {CheckpointUserInfoTable} (CheckpointId GUID NOT NULL, Id TEXT NOT NULL, Guid GUID NOT NULL, UserId TEXT NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL, PRIMARY KEY (CheckpointId, Id))",
+                    $"create index if not exists idx_{CheckpointUserInfoTable}_page on {CheckpointUserInfoTable}(CheckpointId, LastModified, Id, Type)",
 #else
                     $"create table if not exists {ItemsTable} (Guid GUID PRIMARY KEY, SeriesId GUID NULL, Season INTEGER NULL, Status INTEGER NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL)",
-                    $"create index if not exists idx_{ItemsTable} on {ItemsTable}(Guid)",
+                    $"drop index if exists idx_{ItemsTable}",
+                    $"create index if not exists idx_{ItemsTable}_modified on {ItemsTable}(LastModified)",
                     $"create table if not exists {UserInfoTable} (Guid GUID NOT NULL, UserId TEXT NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL, PRIMARY KEY (Guid, UserId))",
-                    $"create index if not exists idx_{UserInfoTable} on {UserInfoTable}(Guid, UserId)"
+                    $"drop index if exists idx_{UserInfoTable}",
+                    $"create index if not exists idx_{UserInfoTable}_user_modified on {UserInfoTable}(UserId, LastModified)",
+                    $"create table if not exists {CheckpointItemsTable} (CheckpointId GUID NOT NULL, Guid GUID NOT NULL, SeriesId GUID NULL, Season INTEGER NULL, Status INTEGER NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL, PRIMARY KEY (CheckpointId, Guid))",
+                    $"create index if not exists idx_{CheckpointItemsTable}_page on {CheckpointItemsTable}(CheckpointId, Status, LastModified, Guid, Type)",
+                    $"create table if not exists {CheckpointUserInfoTable} (CheckpointId GUID NOT NULL, Guid GUID NOT NULL, UserId TEXT NOT NULL, LastModified INTEGER NOT NULL, Type TEXT NOT NULL, PRIMARY KEY (CheckpointId, Guid))",
+                    $"create index if not exists idx_{CheckpointUserInfoTable}_page on {CheckpointUserInfoTable}(CheckpointId, LastModified, Guid, Type)",
 #endif
+                    $"create table if not exists {WatermarkTable} (Id INTEGER PRIMARY KEY, Value INTEGER NOT NULL)"
                 };
 
-                connection.RunQueries(queries);
+                using (WriteLock.Write())
+                {
+                    connection.RunQueries(queries);
+                    InitializeWatermark(connection);
+                }
+            }
+        }
+
+        private void InitializeWatermark(DatabaseConnection connection)
+        {
+            connection.RunInTransaction(db =>
+            {
+                long maximum;
+                using (var statement = db.PrepareStatement(
+                    $"select max(Watermark) from (" +
+                    $"select max(Timestamp) as Watermark from {CheckpointsTable} " +
+                    $"union all select max(SyncTimestamp) from {CheckpointsTable} " +
+                    $"union all select max(LastModified) from {ItemsTable} " +
+                    $"union all select max(LastModified) from {UserInfoTable});"))
+                {
+                    maximum = statement.SelectScalarInt64() ?? 0;
+                }
+
+                using (var statement = db.PrepareStatement(
+                    $"insert or ignore into {WatermarkTable}(Id, Value) values (1, @Value);"))
+                {
+                    statement.TryBind("@Value", maximum);
+                    statement.ExecuteNonQuery();
+                }
+
+                EnsureWatermarkAtLeast(db, maximum);
+            });
+        }
+
+        private long NextWatermark(DatabaseConnection connection)
+        {
+            long current;
+            using (var statement = connection.PrepareStatement(
+                $"select Value from {WatermarkTable} where Id=1;"))
+            {
+                current = statement.SelectScalarInt64() ?? 0;
+            }
+
+            if (current == long.MaxValue)
+            {
+                throw new InvalidOperationException("The synchronization watermark is exhausted.");
+            }
+
+            // Keep new changes ahead of the cursor if the clock moves back.
+            var next = Math.Max(current + 1, _utcFileTime());
+            using (var statement = connection.PrepareStatement(
+                $"update {WatermarkTable} set Value=@Value where Id=1;"))
+            {
+                statement.TryBind("@Value", next);
+                statement.ExecuteNonQuery();
+            }
+
+            return next;
+        }
+
+        private static void EnsureWatermarkAtLeast(DatabaseConnection connection, long value)
+        {
+            using (var statement = connection.PrepareStatement(
+                $"update {WatermarkTable} set Value=@Value where Id=1 and Value < @Value;"))
+            {
+                statement.TryBind("@Value", value);
+                statement.ExecuteNonQuery();
             }
         }
 
@@ -68,7 +159,7 @@ namespace InfuseSync.Storage
             {
                 using (var connection = CreateConnection(true))
                 {
-                    using (var statement = connection.PrepareStatement($"select * from {CheckpointsTable} where Guid=@Guid;"))
+                    using (var statement = connection.PrepareStatement($"select Guid, DeviceId, UserId, Timestamp, SyncTimestamp, LastActivity from {CheckpointsTable} where Guid=@Guid;"))
                     {
                         statement.TryBind("@Guid", checkpointId);
                         foreach (var row in statement.ExecuteQuery())
@@ -79,7 +170,8 @@ namespace InfuseSync.Storage
                                 DeviceId = row.GetString(1),
                                 UserId = row.GetString(2),
                                 Timestamp = row.GetInt64(3),
-                                SyncTimestamp = row.IsDBNull(4) ? null : (long?)row.GetInt64(4)
+                                SyncTimestamp = row.IsDBNull(4) ? null : (long?)row.GetInt64(4),
+                                LastActivity = row.GetInt64(5)
                             };
                         }
                     }
@@ -111,14 +203,18 @@ namespace InfuseSync.Storage
                 {
                     return connection.RunInTransaction(db =>
                     {
-                        long timestamp;
-                        using (var statement = connection.PrepareStatement($"select max(SyncTimestamp) from {CheckpointsTable} where DeviceId=@DeviceId and UserId=@UserId;"))
+                        var lastActivity = DateTime.UtcNow.ToFileTime();
+                        long? previousTimestamp;
+                        using (var statement = db.PrepareStatement($"select max(SyncTimestamp) from {CheckpointsTable} where DeviceId=@DeviceId and UserId=@UserId;"))
                         {
                             statement.TryBind("@DeviceId", deviceId);
                             statement.TryBind("@UserId", userId);
-
-                            timestamp = statement.SelectScalarInt64() ?? DateTime.UtcNow.ToFileTime();
+                            previousTimestamp = statement.SelectScalarInt64();
                         }
+
+                        var timestamp = previousTimestamp ?? NextWatermark(db);
+                        EnsureWatermarkAtLeast(db, timestamp);
+                        DeleteDeviceSnapshots(db, deviceId, userId);
 
                         using (var statement = db.PrepareStatement($"delete from {CheckpointsTable} where DeviceId=@DeviceId and UserId=@UserId;"))
                         {
@@ -129,12 +225,13 @@ namespace InfuseSync.Storage
 
                         var guid = Guid.NewGuid();
 
-                        using (var statement = db.PrepareStatement($"insert into {CheckpointsTable}(Guid, DeviceId, UserId, Timestamp) values (@Guid, @DeviceId, @UserId, @Timestamp);"))
+                        using (var statement = db.PrepareStatement($"insert into {CheckpointsTable}(Guid, DeviceId, UserId, Timestamp, LastActivity) values (@Guid, @DeviceId, @UserId, @Timestamp, @LastActivity);"))
                         {
                             statement.TryBind("@Guid", guid);
                             statement.TryBind("@DeviceId", deviceId);
                             statement.TryBind("@UserId", userId);
                             statement.TryBind("@Timestamp", timestamp);
+                            statement.TryBind("@LastActivity", lastActivity);
                             statement.ExecuteNonQuery();
                         }
 
@@ -144,28 +241,144 @@ namespace InfuseSync.Storage
                             DeviceId = deviceId,
                             UserId = userId,
                             Timestamp = timestamp,
-                            SyncTimestamp = null
+                            SyncTimestamp = null,
+                            LastActivity = lastActivity
                         };
                     });
                 }
             }
         }
 
-        public void UpdateCheckpoint(Guid checkpointId, long syncTimestamp)
+        public Checkpoint StartSync(Guid checkpointId)
+        {
+            return StartSync(checkpointId, null);
+        }
+
+        public Checkpoint StartSync(Guid checkpointId, long syncTimestamp)
+        {
+            return StartSync(checkpointId, (long?)syncTimestamp);
+        }
+
+        private Checkpoint StartSync(Guid checkpointId, long? requestedSyncTimestamp)
         {
             using (WriteLock.Write())
             {
                 using (var connection = CreateConnection())
                 {
-                    connection.RunInTransaction(db =>
+                    return connection.RunInTransaction(db =>
                     {
-                        using (var statement = db.PrepareStatement($"update {CheckpointsTable} set SyncTimestamp=@SyncTimestamp where Guid=@Guid;"))
+                        Checkpoint checkpoint = null;
+                        using (var statement = db.PrepareStatement($"select Guid, DeviceId, UserId, Timestamp, SyncTimestamp, LastActivity from {CheckpointsTable} where Guid=@Guid;"))
+                        {
+                            statement.TryBind("@Guid", checkpointId);
+                            foreach (var row in statement.ExecuteQuery())
+                            {
+                                checkpoint = new Checkpoint
+                                {
+                                    Guid = row.GetGuid(0),
+                                    DeviceId = row.GetString(1),
+                                    UserId = row.GetString(2),
+                                    Timestamp = row.GetInt64(3),
+                                    SyncTimestamp = row.IsDBNull(4) ? null : (long?)row.GetInt64(4),
+                                    LastActivity = row.GetInt64(5)
+                                };
+                                break;
+                            }
+                        }
+
+                        if (checkpoint == null)
+                        {
+                            return checkpoint;
+                        }
+
+                        var lastActivity = Math.Max(checkpoint.LastActivity, DateTime.UtcNow.ToFileTime());
+
+                        if (checkpoint.SyncTimestamp.HasValue)
+                        {
+                            using (var statement = db.PrepareStatement($"update {CheckpointsTable} set LastActivity=@LastActivity where Guid=@Guid;"))
+                            {
+                                statement.TryBind("@LastActivity", lastActivity);
+                                statement.TryBind("@Guid", checkpointId);
+                                statement.ExecuteNonQuery();
+                            }
+
+                            checkpoint.LastActivity = lastActivity;
+                            return checkpoint;
+                        }
+
+                        var syncTimestamp = requestedSyncTimestamp ?? NextWatermark(db);
+                        EnsureWatermarkAtLeast(db, syncTimestamp);
+                        CreateSnapshot(db, checkpoint, syncTimestamp);
+
+                        using (var statement = db.PrepareStatement($"update {CheckpointsTable} set SyncTimestamp=@SyncTimestamp, LastActivity=@LastActivity where Guid=@Guid;"))
                         {
                             statement.TryBind("@SyncTimestamp", syncTimestamp);
+                            statement.TryBind("@LastActivity", lastActivity);
                             statement.TryBind("@Guid", checkpointId);
                             statement.ExecuteNonQuery();
                         }
+
+                        checkpoint.SyncTimestamp = syncTimestamp;
+                        checkpoint.LastActivity = lastActivity;
+                        return checkpoint;
                     });
+                }
+            }
+        }
+
+        private void CreateSnapshot(DatabaseConnection db, Checkpoint checkpoint, long syncTimestamp)
+        {
+            DeleteCheckpointSnapshots(db, checkpoint.Guid);
+
+#if EMBY
+            var insertItems = $"insert into {CheckpointItemsTable}(CheckpointId, Id, Guid, SeriesId, Season, Status, LastModified, Type) select @CheckpointId, Id, Guid, SeriesId, Season, Status, LastModified, Type from {ItemsTable} where LastModified between @FromTimestamp and @ToTimestamp;";
+            var insertUserInfo = $"insert into {CheckpointUserInfoTable}(CheckpointId, Id, Guid, UserId, LastModified, Type) select @CheckpointId, Id, Guid, UserId, LastModified, Type from {UserInfoTable} where UserId=@UserId and LastModified between @FromTimestamp and @ToTimestamp;";
+#else
+            var insertItems = $"insert into {CheckpointItemsTable}(CheckpointId, Guid, SeriesId, Season, Status, LastModified, Type) select @CheckpointId, Guid, SeriesId, Season, Status, LastModified, Type from {ItemsTable} where LastModified between @FromTimestamp and @ToTimestamp;";
+            var insertUserInfo = $"insert into {CheckpointUserInfoTable}(CheckpointId, Guid, UserId, LastModified, Type) select @CheckpointId, Guid, UserId, LastModified, Type from {UserInfoTable} where UserId=@UserId and LastModified between @FromTimestamp and @ToTimestamp;";
+#endif
+
+            using (var statement = db.PrepareStatement(insertItems))
+            {
+                statement.TryBind("@CheckpointId", checkpoint.Guid);
+                statement.TryBind("@FromTimestamp", checkpoint.Timestamp);
+                statement.TryBind("@ToTimestamp", syncTimestamp);
+                statement.ExecuteNonQuery();
+            }
+
+            using (var statement = db.PrepareStatement(insertUserInfo))
+            {
+                statement.TryBind("@CheckpointId", checkpoint.Guid);
+                statement.TryBind("@UserId", checkpoint.UserId);
+                statement.TryBind("@FromTimestamp", checkpoint.Timestamp);
+                statement.TryBind("@ToTimestamp", syncTimestamp);
+                statement.ExecuteNonQuery();
+            }
+        }
+
+        private void DeleteDeviceSnapshots(DatabaseConnection db, string deviceId, string userId)
+        {
+            var checkpointQuery = $"select Guid from {CheckpointsTable} where DeviceId=@DeviceId and UserId=@UserId";
+
+            foreach (var table in new[] { CheckpointItemsTable, CheckpointUserInfoTable })
+            {
+                using (var statement = db.PrepareStatement($"delete from {table} where CheckpointId in ({checkpointQuery});"))
+                {
+                    statement.TryBind("@DeviceId", deviceId);
+                    statement.TryBind("@UserId", userId);
+                    statement.ExecuteNonQuery();
+                }
+            }
+        }
+
+        private void DeleteCheckpointSnapshots(DatabaseConnection db, Guid checkpointId)
+        {
+            foreach (var table in new[] { CheckpointItemsTable, CheckpointUserInfoTable })
+            {
+                using (var statement = db.PrepareStatement($"delete from {table} where CheckpointId=@CheckpointId;"))
+                {
+                    statement.TryBind("@CheckpointId", checkpointId);
+                    statement.ExecuteNonQuery();
                 }
             }
         }
@@ -178,6 +391,8 @@ namespace InfuseSync.Storage
                 {
                     connection.RunInTransaction(db =>
                     {
+                        DeleteCheckpointSnapshots(db, checkpointId);
+
                         using (var statement = db.PrepareStatement($"delete from {CheckpointsTable} where Guid=@Guid;"))
                         {
                             statement.TryBind("@Guid", checkpointId);
@@ -189,8 +404,7 @@ namespace InfuseSync.Storage
         }
 
         public List<ItemRec> GetItems(
-            long fromTimestamp,
-            long toTimestamp,
+            Guid checkpointId,
             ItemStatus status,
             IReadOnlyCollection<string> itemTypes,
             int skip,
@@ -201,12 +415,15 @@ namespace InfuseSync.Storage
                 using (var connection = CreateConnection(true))
                 {
                     var condition = ItemsCondition(itemTypes);
-                    var sql = $"select * from {ItemsTable} where {condition} limit @Limit OFFSET @Offset;";
+#if EMBY
+                    var sql = $"select Id, Guid, SeriesId, Season, Status, LastModified, Type from {CheckpointItemsTable} where {condition} order by LastModified, Id limit @Limit OFFSET @Offset;";
+#else
+                    var sql = $"select Guid, SeriesId, Season, Status, LastModified, Type from {CheckpointItemsTable} where {condition} order by LastModified, Guid limit @Limit OFFSET @Offset;";
+#endif
 
                     using (var statement = connection.PrepareStatement(sql))
                     {
-                        statement.TryBind("@FromTimestamp", fromTimestamp);
-                        statement.TryBind("@ToTimestamp", toTimestamp);
+                        statement.TryBind("@CheckpointId", checkpointId);
                         statement.TryBind("@Status", (int)status);
                         statement.TryBind("@Limit", limit);
                         statement.TryBind("@Offset", skip);
@@ -249,8 +466,7 @@ namespace InfuseSync.Storage
         }
 
         public int ItemsCount(
-            long fromTimestamp,
-            long toTimestamp,
+            Guid checkpointId,
             ItemStatus status,
             IReadOnlyCollection<string> itemTypes)
         {
@@ -259,12 +475,11 @@ namespace InfuseSync.Storage
                 using (var connection = CreateConnection(true))
                 {
                     var condition = ItemsCondition(itemTypes);
-                    var sql = $"select COUNT(*) from {ItemsTable} where {condition};";
+                    var sql = $"select COUNT(*) from {CheckpointItemsTable} where {condition};";
 
                     using (var statement = connection.PrepareStatement(sql))
                     {
-                        statement.TryBind("@FromTimestamp", fromTimestamp);
-                        statement.TryBind("@ToTimestamp", toTimestamp);
+                        statement.TryBind("@CheckpointId", checkpointId);
                         statement.TryBind("@Status", (int)status);
                         return statement.SelectScalarInt() ?? 0;
                     }
@@ -274,7 +489,7 @@ namespace InfuseSync.Storage
 
         private string ItemsCondition(IReadOnlyCollection<string> itemTypes)
         {
-            var condition = $"Status = @Status and LastModified between @FromTimestamp and @ToTimestamp";
+            var condition = $"CheckpointId = @CheckpointId and Status = @Status";
             if (itemTypes != null && itemTypes.Count > 0)
             {
                 condition += $" and Type in ('{String.Join("','", itemTypes.ToArray())}')";
@@ -283,9 +498,7 @@ namespace InfuseSync.Storage
         }
 
         public List<UserInfoRec> GetUserInfos(
-            long fromTimestamp,
-            long toTimestamp,
-            string userId,
+            Guid checkpointId,
             IReadOnlyCollection<string> itemTypes,
             int skip,
             int limit)
@@ -295,13 +508,15 @@ namespace InfuseSync.Storage
                 using (var connection = CreateConnection(true))
                 {
                     var condition = UserInfoCondition(itemTypes);
-                    var sql = $"select * from {UserInfoTable} where {condition} limit @Limit OFFSET @Offset;";
+#if EMBY
+                    var sql = $"select Id, Guid, UserId, LastModified, Type from {CheckpointUserInfoTable} where {condition} order by LastModified, Id limit @Limit OFFSET @Offset;";
+#else
+                    var sql = $"select Guid, UserId, LastModified, Type from {CheckpointUserInfoTable} where {condition} order by LastModified, Guid limit @Limit OFFSET @Offset;";
+#endif
 
                     using (var statement = connection.PrepareStatement(sql))
                     {
-                        statement.TryBind("@FromTimestamp", fromTimestamp);
-                        statement.TryBind("@ToTimestamp", toTimestamp);
-                        statement.TryBind("@UserId", userId);
+                        statement.TryBind("@CheckpointId", checkpointId);
                         statement.TryBind("@Limit", limit);
                         statement.TryBind("@Offset", skip);
 
@@ -339,9 +554,7 @@ namespace InfuseSync.Storage
         }
 
         public int UserInfoCount(
-            long fromTimestamp,
-            long toTimestamp,
-            string userId,
+            Guid checkpointId,
             IReadOnlyCollection<string> itemTypes)
         {
             using (WriteLock.Read())
@@ -349,13 +562,11 @@ namespace InfuseSync.Storage
                 using (var connection = CreateConnection(true))
                 {
                     var condition = UserInfoCondition(itemTypes);
-                    var sql = $"select COUNT(*) from {UserInfoTable} where {condition};";
+                    var sql = $"select COUNT(*) from {CheckpointUserInfoTable} where {condition};";
 
                     using (var statement = connection.PrepareStatement(sql))
                     {
-                        statement.TryBind("@FromTimestamp", fromTimestamp);
-                        statement.TryBind("@ToTimestamp", toTimestamp);
-                        statement.TryBind("@UserId", userId);
+                        statement.TryBind("@CheckpointId", checkpointId);
                         return statement.SelectScalarInt() ?? 0;
                     }
                 }
@@ -364,7 +575,7 @@ namespace InfuseSync.Storage
 
         private string UserInfoCondition(IReadOnlyCollection<string> itemTypes)
         {
-            var condition = $"UserId = @UserId and LastModified between @FromTimestamp and @ToTimestamp";
+            var condition = $"CheckpointId = @CheckpointId";
             if (itemTypes != null && itemTypes.Count > 0)
             {
                 condition += $" and Type in ('{String.Join("','", itemTypes.ToArray())}')";
@@ -380,33 +591,46 @@ namespace InfuseSync.Storage
                 {
                     connection.RunInTransaction(db =>
                     {
-                        using (var statement = db.PrepareStatement($"delete from {CheckpointsTable} where Timestamp < @Timestamp;"))
+                        var oldCheckpointQuery = $"select Guid from {CheckpointsTable} where LastActivity < @Timestamp";
+                        foreach (var table in new[] { CheckpointItemsTable, CheckpointUserInfoTable })
+                        {
+                            using (var statement = db.PrepareStatement($"delete from {table} where CheckpointId in ({oldCheckpointQuery});"))
+                            {
+                                statement.TryBind("@Timestamp", timestamp);
+                                statement.ExecuteNonQuery();
+                            }
+                        }
+
+                        using (var statement = db.PrepareStatement($"delete from {CheckpointsTable} where LastActivity < @Timestamp;"))
                         {
                             statement.TryBind("@Timestamp", timestamp);
                             statement.ExecuteNonQuery();
                         }
 
-                        bool hasSessions;
-                        using (var statement = connection.PrepareStatement($"select exists(select 1 from {CheckpointsTable});"))
+                        foreach (var table in new[] { CheckpointItemsTable, CheckpointUserInfoTable })
                         {
-                            hasSessions = statement.SelectScalarInt() == 1;
+                            using (var statement = db.PrepareStatement($"delete from {table} where not exists (select 1 from {CheckpointsTable} where Guid={table}.CheckpointId);"))
+                            {
+                                statement.ExecuteNonQuery();
+                            }
                         }
 
-                        if (hasSessions)
+                        long? oldestCheckpointTimestamp;
+                        using (var statement = db.PrepareStatement($"select MIN(COALESCE(SyncTimestamp, Timestamp)) from {CheckpointsTable};"))
                         {
-                            long minTimestamp;
-                            using (var statement = connection.PrepareStatement($"select MIN(Timestamp) from {CheckpointsTable};"))
-                            {
-                                minTimestamp = statement.SelectScalarInt64() ?? 0;
-                            }
+                            oldestCheckpointTimestamp = statement.SelectScalarInt64();
+                        }
+
+                        if (oldestCheckpointTimestamp.HasValue)
+                        {
                             using (var statement = db.PrepareStatement($"delete from {ItemsTable} where LastModified < @Timestamp;"))
                             {
-                                statement.TryBind("@Timestamp", timestamp);
+                                statement.TryBind("@Timestamp", oldestCheckpointTimestamp.Value);
                                 statement.ExecuteNonQuery();
                             }
                             using (var statement = db.PrepareStatement($"delete from {UserInfoTable} where LastModified < @Timestamp;"))
                             {
-                                statement.TryBind("@Timestamp", timestamp);
+                                statement.TryBind("@Timestamp", oldestCheckpointTimestamp.Value);
                                 statement.ExecuteNonQuery();
                             }
                         }
@@ -428,18 +652,47 @@ namespace InfuseSync.Storage
 
         public void SaveItems(IEnumerable<ItemRec> items)
         {
+            SaveItems(items, false);
+        }
+
+        public void SaveItemsNow(IEnumerable<ItemRec> items)
+        {
+            SaveItems(items, true);
+        }
+
+        private void SaveItems(IEnumerable<ItemRec> items, bool setLastModified)
+        {
             using (WriteLock.Write())
             {
+                var itemsToSave = items.ToList();
+                if (itemsToSave.Count == 0)
+                {
+                    return;
+                }
+
                 using (var connection = CreateConnection())
                 {
                     connection.RunInTransaction(db =>
                     {
+                        if (setLastModified)
+                        {
+                            var timestamp = NextWatermark(db);
+                            foreach (var item in itemsToSave)
+                            {
+                                item.LastModified = timestamp;
+                            }
+                        }
+                        else
+                        {
+                            EnsureWatermarkAtLeast(db, itemsToSave.Max(i => i.LastModified));
+                        }
+
 #if EMBY
                         var sql = $"insert or replace into {ItemsTable} values (@Id, @Guid, @SeriesId, @Season, @Status, @LastModified, @Type);";
 #else
                         var sql = $"insert or replace into {ItemsTable} values (@Guid, @SeriesId, @Season, @Status, @LastModified, @Type);";
 #endif
-                        foreach (var i in items)
+                        foreach (var i in itemsToSave)
                         {
                             using (var statement = db.PrepareStatement(sql))
                             {
@@ -462,18 +715,47 @@ namespace InfuseSync.Storage
 
         public void SaveUserInfo(List<UserInfoRec> infoRecs)
         {
+            SaveUserInfo(infoRecs, false);
+        }
+
+        public void SaveUserInfoNow(IEnumerable<UserInfoRec> infoRecs)
+        {
+            SaveUserInfo(infoRecs, true);
+        }
+
+        private void SaveUserInfo(IEnumerable<UserInfoRec> infoRecs, bool setLastModified)
+        {
             using (WriteLock.Write())
             {
+                var infoRecsToSave = infoRecs.ToList();
+                if (infoRecsToSave.Count == 0)
+                {
+                    return;
+                }
+
                 using (var connection = CreateConnection())
                 {
                     connection.RunInTransaction(db =>
                     {
+                        if (setLastModified)
+                        {
+                            var timestamp = NextWatermark(db);
+                            foreach (var infoRec in infoRecsToSave)
+                            {
+                                infoRec.LastModified = timestamp;
+                            }
+                        }
+                        else
+                        {
+                            EnsureWatermarkAtLeast(db, infoRecsToSave.Max(i => i.LastModified));
+                        }
+
 #if EMBY
                         var sql = $"insert or replace into {UserInfoTable} values (@Id, @Guid, @UserId, @LastModified, @Type);";
 #else
                         var sql = $"insert or replace into {UserInfoTable} values (@Guid, @UserId, @LastModified, @Type);";
 #endif
-                        foreach (var i in infoRecs)
+                        foreach (var i in infoRecsToSave)
                         {
                             using (var statement = db.PrepareStatement(sql))
                             {

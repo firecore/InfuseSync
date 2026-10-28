@@ -11,10 +11,12 @@
     <RootNamespace>InfuseSync</RootNamespace>
     <AssemblyName>InfuseSync</AssemblyName>
     <DefineConstants>EMBY</DefineConstants>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetLockFilePath>packages.emby.lock.json</NuGetLockFilePath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.*" />
+    <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.11" />
     <PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />
     <PackageReference Include="System.Memory" Version="4.5.5" />
   </ItemGroup>
@@ -23,6 +25,8 @@
     <Compile Remove="**" />
     <Compile Include="API/InfuseSyncService.cs" />
     <Compile Include="Configuration/PluginOptions.cs" />
+    <Compile Include="EntryPoints/CoalescingBatchWriter.cs" />
+    <Compile Include="EntryPoints/EventHandlerTracker.cs" />
     <Compile Include="EntryPoints/LibrarySyncManager.cs" />
     <Compile Include="EntryPoints/Shared.cs" />
     <Compile Include="EntryPoints/UserSyncManager.cs" />
@@ -41,6 +45,8 @@
     <Compile Include="Storage/Emby/SqliteExtensions.cs" />
     <Compile Include="Storage/Migrations/DbVersionManager.cs" />
     <Compile Include="Storage/Migrations/IDbMigration.cs" />
+    <Compile Include="Storage/Migrations/MigrationAddCheckpointSnapshots.cs" />
+    <Compile Include="Storage/Migrations/MigrationAddCheckpointActivity.cs" />
     <Compile Include="Storage/Migrations/MigrationChangeUserDataPrimaryKey.cs" />
     <Compile Include="Storage/Migrations/MigrationDropBetaDatabase.cs" />
   </ItemGroup>
