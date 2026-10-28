@@ -11,10 +11,12 @@
     <RootNamespace>InfuseSync</RootNamespace>
     <AssemblyName>InfuseSync</AssemblyName>
     <DefineConstants>EMBY</DefineConstants>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetLockFilePath>packages.emby.lock.json</NuGetLockFilePath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.*" />
+    <PackageReference Include="MediaBrowser.Server.Core" Version="4.8.11" />
     <PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />
     <PackageReference Include="System.Memory" Version="4.5.5" />
   </ItemGroup>

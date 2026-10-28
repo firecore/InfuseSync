@@ -30,6 +30,37 @@ namespace InfuseSync.EntryPoints
             return ShouldSyncItem(item, t => SyncTypes.Contains(t));
         }
 
+#if JELLYFIN
+        public static BaseItem ResolveUpdatedItem(
+            BaseItem item,
+            Func<Guid, BaseItem> itemResolver,
+            Func<Video, Guid, bool> isLocalVersion)
+        {
+            if (item is not Video video)
+            {
+                return item;
+            }
+
+            var primaryId = video.PrimaryVersionId;
+            if (!primaryId.HasValue && video.OwnerId != Guid.Empty)
+            {
+                primaryId = video.OwnerId;
+            }
+
+            if (!primaryId.HasValue || itemResolver(primaryId.Value) is not Video primary)
+            {
+                return item;
+            }
+
+            var isOwnedByPrimary = video.PrimaryVersionId == primary.Id
+                && video.OwnerId == primary.Id;
+
+            return isOwnedByPrimary || isLocalVersion(primary, video.Id)
+                ? primary
+                : item;
+        }
+#endif
+
         private static bool ShouldSyncItem(BaseItem item, Func<string, bool> typeCheck)
         {
             if (item.LocationType == MediaBrowser.Model.Entities.LocationType.Virtual)
